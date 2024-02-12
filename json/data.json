@@ -1,0 +1,182 @@
+{
+    "data" : 
+    [
+        {
+            "name" : "talis5",
+            "msg_count" : 1,
+            "id" : 1,
+            "pcb_barcode" : "pcb-barcode-1",
+            "sn_code_1" : "sn-code-1",
+            "sn_code_2" : "sn-code-2",
+            "pack_data" : 
+            {
+                "unit" : "V",
+                "divider" : 100,
+                "value" : 5880
+            },
+            "pack_current" :
+            {
+                "unit" : "A",
+                "divider" : 10,
+                "value" : 250
+            },
+            "remaining_capacity" :
+            {
+                "unit" : "Ah",
+                "divider" : 10,
+                "value" : 280
+            },
+            "average_cell_temperature" :
+            {
+                "unit" : "Celcius",
+                "divider" : 10,
+                "value" : 380
+            },
+            "env_temperature" : 
+            {
+                "unit" : "Celcius",
+                "divider" : 10,
+                "value" : 370
+            },
+            "warning_flag" :
+            {
+                "unit" : "None",
+                "value" : 256,
+                "cell_ov_alm" : 1,
+                "cell_uv_alm" : 0,
+                "pack_ov_alm" : 1,
+                "pack_uv_alm" : 0,
+                "chg_oc_alm" : 1,
+                "dchg_oc_alm" : 0,
+                "bat_ot_alm" : 1,
+                "bat_ut_alm" : 0,
+                "env_ot_alm" : 1,
+                "env_ut_alm" : 0,
+                "mos_ot_alm" : 1,
+                "low_capacity" : 0
+            },
+            "protection_flag" :
+            {
+                "unit" : "None",
+                "value" : 512,
+                "cell_ov_prot" : 1,
+                "cell_uv_prot" : 0,
+                "pack_ov_prot" : 1,
+                "pack_uv_prot" : 0,
+                "short_prot" : 1,
+                "oc_prot" : 0,
+                "chg_ot_prot" : 1,
+                "chg_ut_prot" : 0,
+                "dchg_ot_prot" : 1,
+                "dchg_ut_prot" : 0
+            },
+            "fault_status_flag" :
+            {
+                "unit" : "None",
+                "value" : 1024,
+                "comm_sampling_fault" : 1,
+                "temp_sensor_break" : 0,
+                "soc" : 1,
+                "sod" : 0,
+                "chg_mos" : 1,
+                "dchg_mos" : 0,
+                "chg_limit_function" : 1
+            },
+            "soc" : 
+            {
+                "unit" : "%",
+                "divider" : 100,
+                "value" : 6800
+            },
+            "soh" :
+            {
+                "unit" : "%",
+                "divider" : 100,
+                "value" : 10000
+            },
+            "full_charged_cap" :
+            {
+                "unit" : "Ah",
+                "divider" : 10,
+                "value" : 1000
+            },
+            "cycle_count" :
+            {
+                "unit" : "None",
+                "divider" : 1,
+                "value" : 10
+            },
+            "cell_voltage" : 
+            {
+                "unit" : "V",
+                "divider" : 1000,
+                "value" : [
+                    1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+                ]
+            },
+            "cell_temperature" : 
+            {
+                "unit" : "Celcius",
+                "divider" : 10,
+                "value" : [
+                    1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+                ]
+            },
+            "balance_temperature" :
+            {
+                "unit" : "Celcius",
+                "divider" : 10,
+                "value" : 430
+            },
+            "max_cell_voltage" :
+            {
+                "unit" : "V",
+                "divider" : 1000,
+                "value" : 3650
+            },
+            "min_cell_voltage" :
+            {
+                "unit" : "V",
+                "divider" : 1000,
+                "value" : 2500
+            },
+            "cell_voltage_diff" :
+            {
+                "unit" : "V",
+                "divider" : 1000,
+                "value" : 50
+            },
+            "max_cell_temperature" :
+            {
+                "unit" : "Celcius",
+                "divider" : 10,
+                "value" : 420
+            },
+            "min_cell_temperature" :
+            {
+                "unit" : "Celcius",
+                "divider" : 10,
+                "value" : 360
+            },
+            "fet_temperature" :
+            {
+                "unit" : "Celcius",
+                "divider" : 10,
+                "value" : 600
+            },
+            "remaining_charge_time" :
+            {
+                "unit" : "Seconds",
+                "divider" : 1,
+                "value" : 1800
+            },
+            "remaining_discharge_time" :
+            {
+                "unit" : "Seconds",
+                "divider" : 1,
+                "value" : 3600
+            }
+        }
+    ]
+    
+}
