@@ -3,6 +3,7 @@
 TianBMS::TianBMS(TianBMSUtils::Endianess endianess)
 {
     _endianess = endianess;
+    esp_log_level_set(_TAG, ESP_LOG_INFO);
 }
 
 bool TianBMS::update(uint8_t id, uint32_t token, uint16_t* data, size_t dataSize)
@@ -74,6 +75,15 @@ bool TianBMS::update(uint8_t id, uint32_t token, uint16_t* data, size_t dataSize
                 _bmsData[id].msgCount++;
                 return true;
             }
+        }
+        break;
+    case TianBMSUtils::RequestType::REQUEST_SCAN :
+        /* code */
+        _bmsData[id].id = id;
+        if (updateOnScan(id, data, dataSize))
+        {
+            _bmsData[id].msgCount++;
+            return true;
         }
         break;
     default:
@@ -155,6 +165,17 @@ bool TianBMS::updateData(uint8_t id, uint16_t* data, size_t dataSize)
     return false;
 }
 
+bool TianBMS::updateOnScan(uint8_t id, uint16_t* data, size_t dataSize)
+{    
+    if (dataSize == 1)
+    {
+        _bmsData[id].packVoltage = *data++;
+        ESP_LOGI(_TAG, "Update on scan");
+        return true;
+    }
+    return false;
+}
+
 bool TianBMS::updatePcbBarcode(uint8_t id, uint16_t* data, size_t dataSize, bool swap)
 {
     if (Utilities::uint16ArrayToCharArray(data, dataSize, _bmsData[id].pcbBarcode.data(), _bmsData[id].pcbBarcode.size(), swap) > 0)
@@ -188,7 +209,7 @@ uint32_t TianBMS::getToken(uint8_t id, TianBMSUtils::RequestType requestType)
     return token;
 }
 
-const std::map<int, TianBMSData>& TianBMS::getTianBMSData()
+std::map<int, TianBMSData>& TianBMS::getTianBMSData()
 {
     return _bmsData;
 }

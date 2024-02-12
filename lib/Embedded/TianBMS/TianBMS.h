@@ -10,12 +10,13 @@
 #include <map>
 
 namespace TianBMSUtils {
-    enum RequestType : uint32_t 
+    enum RequestType : uint8_t 
     {
         REQUEST_DATA = 0x00,
         REQUEST_PCB_CODE = 0x01,
         REQUEST_SN1_CODE = 0x02,
-        REQUEST_SN2_CODE = 0x03
+        REQUEST_SN2_CODE = 0x03,
+        REQUEST_SCAN = 0x04
     };
 
     enum Endianess : uint8_t 
@@ -146,6 +147,12 @@ struct TianBMSData
 
 };
 
+struct TokenInfo
+{
+    uint8_t id = 0;
+    uint8_t requestType = 0;
+};
+
 class TianBMS
 {
 private:
@@ -156,6 +163,7 @@ private:
     uint8_t _endianess;
     uint8_t _maxErrorCount = 3;
     bool updateData(uint8_t id, uint16_t* data, size_t dataSize);
+    bool updateOnScan(uint8_t id, uint16_t* data, size_t dataSize);
     bool updatePcbBarcode(uint8_t id, uint16_t* data, size_t dataSize, bool swap = false);
     bool updateSnCode1(uint8_t id, uint16_t* data, size_t dataSize, bool swap = false);
     bool updateSnCode2(uint8_t id, uint16_t* data, size_t dataSize, bool swap = false);
@@ -167,7 +175,8 @@ public:
     void cleanUp();
     void setMaxErrorCount(uint8_t maxErrorCount);
     uint32_t getToken(uint8_t id, TianBMSUtils::RequestType requestType);
-    const std::map<int, TianBMSData>& getTianBMSData();
+    TokenInfo parseToken(uint32_t token);
+    std::map<int, TianBMSData>& getTianBMSData();
     uint16_t getPackVoltage(uint8_t id);
     uint16_t getPackCurrent(uint8_t id);
     uint16_t getRemainingCapacity(uint8_t id);

@@ -3,16 +3,7 @@
 
 #include <WiFi.h>
 #include <memory>
-
-enum server_type : uint8_t {
-    STATIC = 1,
-    DHCP = 2
-};
-enum mode_type : uint8_t {
-    AP = 1,
-    STATION = 2,
-    AP_STATION = 3
-};
+#include "WiFidef.h"
 
 struct ConfigParams {
     std::array<char, 32> ssid;
@@ -64,8 +55,6 @@ public:
     String getApSsid();
     ~WiFiSetting();
 };
-
-
 
 
 #endif

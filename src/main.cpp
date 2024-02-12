@@ -11,6 +11,7 @@
 #include <WiFiSetting.h>
 #include <TianBMS.h>
 #include <ModbusClientTCP.h>
+#include <WiFiSave.h>
 
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include "esp_log.h"
@@ -20,9 +21,12 @@
 // #include <flashz.hpp>
 
 #include <map>
+#include <vector>
 #include "LittleFS.h"
 
 const char *TAG = "ESP32-Tian-BMS-Collector";
+#define FIRMWARE_VERSION 0.1
+
 
 WiFiClient theClient;                          // Set up a client
 
@@ -32,7 +36,11 @@ ModbusClientTCP MB(theClient);
 
 TianBMS reader;
 
+WiFiSave wifiSave;
 WiFiSetting wifiSetting;
+
+uint8_t slaveCount = 1;
+std::map<int, TianBMSData>::iterator globalIterator;
 
 unsigned long lastReconnectMillis;
 unsigned long lastRequest;
@@ -42,6 +50,7 @@ int internalLed = 2;
 int num = 1;
 
 bool isRestart = false;
+uint8_t isScanFinished = false;
 
 // put function declarations here:
 
@@ -176,6 +185,7 @@ void handleData(ModbusMessage response, uint32_t token)
 {
     uint8_t functionCode = response.getFunctionCode();
     uint8_t serverId = response.getServerID();
+    ESP_LOGI(TAG, "Server ID : %d\n", serverId);
     
     if (functionCode == READ_HOLD_REGISTER)
     {
@@ -211,7 +221,6 @@ void handleError(Error error, uint32_t token)
 
 void setup() {
   // put your setup code here, to run once:
-
     pinMode(internalLed, OUTPUT);
     Serial.begin(115200); 
     Serial.setDebugOutput(true);
@@ -220,14 +229,25 @@ void setup() {
     WiFi.onEvent(WiFiStationConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
     WiFi.onEvent(WiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
 
+    wifiSave.begin("wifi_param");
+    // run only for first time
+    // wifiSave.setMode(mode_type::AP_STATION);
+    // wifiSave.setServer(server_type::DHCP);
+    // wifiSave.setSsid("RnD_Sundaya");
+    // wifiSave.setPassword("sundaya22");
+    // wifiSave.setIp("192.168.2.251");
+    // wifiSave.setGateway("192.168.2.1");
+    // wifiSave.setSubnet("255.255.255.0");
+    // wifiSave.save();
+
   	WifiParams wifiParams;
-    wifiParams.mode = mode_type::AP_STATION;
-    wifiParams.params.server = server_type::DHCP; // 1 to set into static IP, 2 to set into dhcp
-    strcpy(wifiParams.params.ssid.data(), "RnD_Sundaya");
-    strcpy(wifiParams.params.pass.data(), "sundaya22");
-    strcpy(wifiParams.params.ip.data(), "192.168.2.251");
-    strcpy(wifiParams.params.gateway.data(), "192.168.2.1");
-    strcpy(wifiParams.params.subnet.data(), "255.255.255.0");
+    wifiParams.mode = wifiSave.getMode(); // 1 to set as AP, 2 to set as STATION, 3 to set AP + STATION
+    wifiParams.params.server = wifiSave.getServer(); // 1 to set into static IP, 2 to set into dhcp
+    strcpy(wifiParams.params.ssid.data(), wifiSave.getSsid().c_str());
+    strcpy(wifiParams.params.pass.data(), wifiSave.getPassword().c_str());
+    strcpy(wifiParams.params.ip.data(), wifiSave.getIp().c_str());
+    strcpy(wifiParams.params.gateway.data(), wifiSave.getGateway().c_str());
+    strcpy(wifiParams.params.subnet.data(), wifiSave.getSubnet().c_str());
 
     wifiParams.softApParams.server = server_type::STATIC;
     strcpy(wifiParams.softApParams.ssid.data(), "ESP32-Tian-BMS");
@@ -350,15 +370,16 @@ void setup() {
                 if (leftOverInput.length() > maxLen)
                 {
                     len = maxLen;
+                    memcpy(buffer, leftOverInput.begin(), len);
                     leftOverInput = leftOverInput.substring(len);
                 }
                 else
                 {
                     isOverflow = false;
                     len = leftOverInput.length();
+                    memcpy(buffer, leftOverInput.begin(), len);
                     leftOverInput = "";
                 }
-                memcpy(buffer, leftOverInput.begin(), len);
                 return len;
             }
 
@@ -419,6 +440,51 @@ void setup() {
         });
         response->addHeader("Server","ESP Async Web Server");
         request->send(response); });
+
+    server.on("/get-device-info", HTTP_GET, [](AsyncWebServerRequest *request)
+    {
+        String output;
+        StaticJsonDocument<256> doc;
+        doc["firmware_version"] = FIRMWARE_VERSION;
+        if (wifiSave.getMode() == 1)
+        {
+            doc["device_ip"] = WiFi.softAPIP().toString(); 
+            doc["ssid"] = WiFi.softAPSSID();
+        }
+        else
+        {
+            doc["device_ip"] = WiFi.localIP().toString(); 
+            doc["ssid"] = WiFi.SSID();
+        }
+        
+        doc["mac_address"] = WiFi.macAddress();
+
+        if (wifiSave.getServer() == 1)
+        {
+            doc["server_mode"] = "STATIC";
+        }
+        else
+        {
+            doc["server_mode"] = "DHCP";
+        }
+        serializeJson(doc, output);
+        request->send(200, "application/json", output); });
+
+    server.on("/get-active-slave", HTTP_GET, [](AsyncWebServerRequest *request)
+    {
+        StaticJsonDocument<768> doc;
+        String output;
+        doc["address-status"] = isScanFinished;
+        JsonArray slave_list = doc.createNestedArray("slave-list");
+        std::map<int, TianBMSData>::iterator it;
+        for (it = reader.getTianBMSData().begin(); it != reader.getTianBMSData().end(); it++)
+        {
+            slave_list.add((*it).first);
+        }
+
+        serializeJson(doc, output);
+
+        request->send(200, "application/json", output); });
 
     // server.on("/get-cms-data", HTTP_GET, [](AsyncWebServerRequest *request)
     // {
@@ -661,7 +727,9 @@ void setup() {
     // server.addHandler(setFactoryReset);
     // server.addHandler(setSoc);
     server.begin();
+    globalIterator = reader.getTianBMSData().begin();
     lastRequest = millis();
+    
 }
 
 void loop() {
@@ -679,15 +747,48 @@ void loop() {
 		}
 	}
 
-    if (millis() - lastRequest > 500)
+    if (isScanFinished)
     {
-        Error err = MB.addRequest(reader.getToken(1, TianBMSUtils::REQUEST_DATA), 1, READ_HOLD_REGISTER, 4096, 43);
-        if (err!=SUCCESS) {
-            ModbusError e(err);
-            Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+        if (globalIterator != reader.getTianBMSData().end())
+        {
+            if (millis() - lastRequest > 500)
+            {
+                Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
+                if (err!=SUCCESS) {
+                    ModbusError e(err);
+                    Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                }
+                lastRequest = millis();
+                globalIterator++;
+            }
         }
-        lastRequest = millis();
+        else
+        {
+            globalIterator = reader.getTianBMSData().begin();
+        }
     }
+    else
+    {
+        if (millis() - lastRequest > 500)
+        {
+            Error err = MB.addRequest(reader.getToken(slaveCount, TianBMSUtils::REQUEST_SCAN), slaveCount, READ_HOLD_REGISTER, 4096, 1);
+            if (err!=SUCCESS) {
+                ModbusError e(err);
+                Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+            }
+            else
+            {
+                slaveCount++;
+            }
+            if (slaveCount > 16)
+            {
+                slaveCount = 1;
+                isScanFinished = 1;
+            }
+            lastRequest = millis();
+        }
+    }
+    
     
     
 
