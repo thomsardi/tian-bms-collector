@@ -39,6 +39,7 @@ public:
     void cancel();
     void reset();
     void restart();
+    void clear();
     void setMode(uint8_t mode);
 
     void setServer(uint8_t serverType);

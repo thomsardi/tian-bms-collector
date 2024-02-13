@@ -167,15 +167,15 @@ private:
     bool updatePcbBarcode(uint8_t id, uint16_t* data, size_t dataSize, bool swap = false);
     bool updateSnCode1(uint8_t id, uint16_t* data, size_t dataSize, bool swap = false);
     bool updateSnCode2(uint8_t id, uint16_t* data, size_t dataSize, bool swap = false);
+    TokenInfo parseToken(uint32_t token);
 public:
     TianBMS(TianBMSUtils::Endianess endianess = TianBMSUtils::Endianess::ENDIAN_LITTLE);
     ~TianBMS();
     bool update(uint8_t id, uint32_t token, uint16_t* data, size_t dataSize);
-    bool updateOnError(uint8_t id, uint32_t token);
+    bool updateOnError(uint32_t token);
     void cleanUp();
     void setMaxErrorCount(uint8_t maxErrorCount);
     uint32_t getToken(uint8_t id, TianBMSUtils::RequestType requestType);
-    TokenInfo parseToken(uint32_t token);
     std::map<int, TianBMSData>& getTianBMSData();
     uint16_t getPackVoltage(uint8_t id);
     uint16_t getPackCurrent(uint8_t id);

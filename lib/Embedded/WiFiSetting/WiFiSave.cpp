@@ -141,11 +141,11 @@ void WiFiSave::writeShadow()
         preferences.begin(_name.c_str());
         _shadowParameter.mode = preferences.getUChar("u_mode");
         _shadowParameter.server = preferences.getUChar("u_svr");
-        _shadowParameter.ip = preferences.getUChar("u_ip");
-        _shadowParameter.gateway = preferences.getUChar("u_gateway");
-        _shadowParameter.subnet = preferences.getUChar("u_subnet");
-        _shadowParameter.ssid = preferences.getUChar("u_ssid");
-        _shadowParameter.password = preferences.getUChar("u_pwd");
+        _shadowParameter.ip = preferences.getString("u_ip");
+        _shadowParameter.gateway = preferences.getString("u_gateway");
+        _shadowParameter.subnet = preferences.getString("u_subnet");
+        _shadowParameter.ssid = preferences.getString("u_ssid");
+        _shadowParameter.password = preferences.getString("u_pwd");
         preferences.end();
     }
 }
@@ -168,6 +168,18 @@ void WiFiSave::reset()
     }
 }
 
+void WiFiSave::clear()
+{
+    if (_isActive)
+    {
+        Preferences preferences;
+        preferences.begin(_name.c_str());
+        preferences.clear();
+        preferences.end();
+        _isActive = false;
+    }
+}
+
 void WiFiSave::restart()
 {
     begin(_name);
@@ -180,6 +192,7 @@ uint8_t WiFiSave::getMode()
         Preferences preferences;
         preferences.begin(_name.c_str());
         uint8_t value = preferences.getUChar("u_mode");
+        preferences.end();
         return value;
     }
     return 0;
@@ -192,6 +205,7 @@ uint8_t WiFiSave::getServer()
         Preferences preferences;
         preferences.begin(_name.c_str());
         uint8_t value = preferences.getUChar("u_svr");
+        preferences.end();
         return value;
     }
     return 0;
@@ -204,6 +218,7 @@ String WiFiSave::getIp()
         Preferences preferences;
         preferences.begin(_name.c_str());
         String value = preferences.getString("u_ip");
+        preferences.end();
         return value;
     }
     return "";
@@ -216,6 +231,7 @@ String WiFiSave::getGateway()
         Preferences preferences;
         preferences.begin(_name.c_str());
         String value = preferences.getString("u_gateway");
+        preferences.end();
         return value;
     }
     return "";
@@ -228,6 +244,7 @@ String WiFiSave::getSubnet()
         Preferences preferences;
         preferences.begin(_name.c_str());
         String value = preferences.getString("u_subnet");
+        preferences.end();
         return value;
     }
     return "";
@@ -240,6 +257,7 @@ String WiFiSave::getSsid()
         Preferences preferences;
         preferences.begin(_name.c_str());
         String value = preferences.getString("u_ssid");
+        preferences.end();
         return value;
     }
     return "";
@@ -252,6 +270,7 @@ String WiFiSave::getPassword()
         Preferences preferences;
         preferences.begin(_name.c_str());
         String value = preferences.getString("u_pwd");
+        preferences.end();
         return value;
     }
     return "";

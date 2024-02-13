@@ -8,7 +8,8 @@ TianBMS::TianBMS(TianBMSUtils::Endianess endianess)
 
 bool TianBMS::update(uint8_t id, uint32_t token, uint16_t* data, size_t dataSize)
 {
-    uint8_t requestType = (token - _uniqueIdentifier) & 0x00FFFFFF;
+    TokenInfo tokenInfo = parseToken(token);
+    uint8_t requestType = tokenInfo.requestType;
     switch (requestType)
     {
     case TianBMSUtils::RequestType::REQUEST_DATA :
@@ -93,11 +94,21 @@ bool TianBMS::update(uint8_t id, uint32_t token, uint16_t* data, size_t dataSize
     return false;
 }
 
-bool TianBMS::updateOnError(uint8_t id, uint32_t token)
+TokenInfo TianBMS::parseToken(uint32_t token)
 {
-    if (_bmsData.find(id) != _bmsData.end())
+    TokenInfo tokenInfo;
+    tokenInfo.id = (token - _uniqueIdentifier) >> 24;
+    tokenInfo.requestType = (token - _uniqueIdentifier) & 0x00FFFFFF;
+    return tokenInfo;
+}
+
+bool TianBMS::updateOnError(uint32_t token)
+{
+    TokenInfo tokenInfo = parseToken(token);
+    ESP_LOGI(_TAG, "Id : %d error\n", tokenInfo.id);
+    if (_bmsData.find(tokenInfo.id) != _bmsData.end())
     {
-        _bmsData[id].errorCount++;
+        _bmsData[tokenInfo.id].errorCount++;
         return true;
     }
     return false;
@@ -205,7 +216,7 @@ bool TianBMS::updateSnCode2(uint8_t id, uint16_t* data, size_t dataSize, bool sw
 
 uint32_t TianBMS::getToken(uint8_t id, TianBMSUtils::RequestType requestType)
 {
-    uint32_t token = requestType + _uniqueIdentifier;
+    uint32_t token = requestType + _uniqueIdentifier + (id << 24);
     return token;
 }
 

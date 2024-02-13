@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <AsyncJson.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
@@ -12,6 +13,8 @@
 #include <TianBMS.h>
 #include <ModbusClientTCP.h>
 #include <WiFiSave.h>
+#include <Talis5Memory.h>
+#include <Talis5JsonHandler.h>
 
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include "esp_log.h"
@@ -36,21 +39,26 @@ ModbusClientTCP MB(theClient);
 
 TianBMS reader;
 
+Talis5Memory talis5Memory;
 WiFiSave wifiSave;
 WiFiSetting wifiSetting;
 
-uint8_t slaveCount = 1;
+std::vector<uint8_t> slave;
 std::map<int, TianBMSData>::iterator globalIterator;
 
 unsigned long lastReconnectMillis;
 unsigned long lastRequest;
+unsigned long lastCleanup;
 int reconnectInterval = 5000;
 int internalLed = 2;
 
-int num = 1;
+uint8_t slavePointer = 0;
 
 bool isRestart = false;
+bool isCleanup = false;
+bool isSlaveChanged = false;
 uint8_t isScanFinished = false;
+uint8_t emptyCount = 0;
 
 // put function declarations here:
 
@@ -217,6 +225,7 @@ void handleError(Error error, uint32_t token)
     // ModbusError wraps the error code and provides a readable error message for it
     ModbusError me(error);
     Serial.printf("Error response: %02X - %s\n", (int)me, (const char *)me);
+    reader.updateOnError(token);
 }
 
 void setup() {
@@ -239,6 +248,19 @@ void setup() {
     // wifiSave.setGateway("192.168.2.1");
     // wifiSave.setSubnet("255.255.255.0");
     // wifiSave.save();
+
+    talis5Memory.begin("talis5_param");
+    // talis5Memory.setModbusTargetIp("192.168.2.113");
+    // talis5Memory.setModbusPort(502);
+    // uint8_t list[7] = {1,2,5,7,10,12,32};
+    // talis5Memory.setSlave(list, 7);
+    // talis5Memory.save();
+
+    ESP_LOGI(TAG, "Number of slave : %d\n", talis5Memory.getSlaveSize());
+
+    slave.reserve(talis5Memory.getSlaveSize());
+    slave.resize(talis5Memory.getSlaveSize());
+    talis5Memory.getSlave(slave.data(), talis5Memory.getSlaveSize());
 
   	WifiParams wifiParams;
     wifiParams.mode = wifiSave.getMode(); // 1 to set as AP, 2 to set as STATION, 3 to set AP + STATION
@@ -308,7 +330,11 @@ void setup() {
     MB.onErrorHandler(&handleError);
     MB.setTimeout(2000, 200);
     MB.begin();
-    MB.setTarget(IPAddress(192, 168, 2, 113), 502);
+    IPAddress ip;
+    ip.fromString(talis5Memory.getModbusTargetIp());
+    MB.setTarget(ip, talis5Memory.getModbusPort());
+    // MB.setTarget(IPAddress(192, 168, 2, 113), 502);
+
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
 		request->send(LittleFS, "/index.html", "text/html");
@@ -548,6 +574,23 @@ void setup() {
         isRestart = true;
     }, handleCompressedUpload);
 
+    AsyncCallbackJsonWebHandler *setSlaveHandler = new AsyncCallbackJsonWebHandler("/api/set-slave", [](AsyncWebServerRequest *request, JsonVariant &json)
+    {
+        Talis5JsonHandler handler;
+        int status = 400;
+        std::vector<uint8_t> buff;
+        size_t len = handler.parseSetSlaveJson(json, buff);
+        if (len != 0)
+        {
+            status = 200;
+            talis5Memory.setSlave(buff.data(), len);
+            isSlaveChanged = true;
+        }
+        String response = handler.buildJsonResponse(status);
+        request->send(status, "application/json", response);
+        return;
+    });
+
     // AsyncCallbackJsonWebHandler *setAddressHandler = new AsyncCallbackJsonWebHandler("/set-addressing", [](AsyncWebServerRequest *request, JsonVariant &json)
     // {
     //     String input = json.as<String>();
@@ -726,15 +769,18 @@ void setup() {
     // server.addHandler(setNetwork);
     // server.addHandler(setFactoryReset);
     // server.addHandler(setSoc);
+    server.addHandler(setSlaveHandler);
     server.begin();
     globalIterator = reader.getTianBMSData().begin();
     lastRequest = millis();
+    lastCleanup = millis();
     
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   	// ESP_LOGI(TAG, "ULULULULU");
+    
     if (wifiSetting.getMode() == mode_type::STATION || wifiSetting.getMode() == mode_type::AP_STATION)
 	{
 		if ((WiFi.status() != WL_CONNECTED) && (millis() - lastReconnectMillis >= reconnectInterval)) {
@@ -747,46 +793,105 @@ void loop() {
 		}
 	}
 
+    /**
+     * TO DO : This block is used to clean up obsolete data to free up space, but still causing crash
+    */
+    // if (isScanFinished)
+    // {
+    //     if (millis() - lastCleanup > 1000)
+    //     {
+    //         isCleanup = true;
+    //         if (MB.pendingRequests() == 0) // check if there is still pending request on queue, wait until it is empty
+    //         {
+    //             reader.cleanUp(); // perform cleanup
+    //             ESP_LOGI(TAG, "clean up");
+    //             isCleanup = false;
+    //             std::map<int, TianBMSData>::iterator it = reader.getTianBMSData().begin();
+    //             if (it == reader.getTianBMSData().end()) // check if data is empty
+    //             {
+    //                 emptyCount++;
+    //                 if (emptyCount > 3) // if it is empty during > 3 times check, then perform address scan again
+    //                 {
+    //                     isScanFinished = false;
+    //                     emptyCount = 0;
+    //                 }
+    //             }
+    //             lastCleanup = millis();
+    //         }
+    //     }
+    // }
+    // else
+    // {
+    //     lastCleanup = millis();
+    // }
+
+    if(isSlaveChanged)
+    {
+        if (MB.pendingRequests() == 0)
+        {
+            talis5Memory.save();
+            isScanFinished = false;
+            isSlaveChanged = false;
+            slave.reserve(talis5Memory.getSlaveSize());
+            slave.resize(talis5Memory.getSlaveSize());
+            talis5Memory.getSlave(slave.data(), talis5Memory.getSlaveSize());
+            // reader.getTianBMSData().clear();
+        }
+    }
+
     if (isScanFinished)
     {
-        if (globalIterator != reader.getTianBMSData().end())
+        /**
+         * This block will push the request to queue based on detected slave
+        */
+        // if (!isCleanup) // this flag is to detect if it's time to do cleanup, then pause the .addRequest
+        // { 
+        if (!isSlaveChanged)
         {
-            if (millis() - lastRequest > 500)
+            if (globalIterator != reader.getTianBMSData().end())
             {
-                Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
-                if (err!=SUCCESS) {
-                    ModbusError e(err);
-                    Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                if (millis() - lastRequest > 500)
+                {
+                    Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
+                    if (err!=SUCCESS) {
+                        ModbusError e(err);
+                        Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                    }
+                    lastRequest = millis();
+                    globalIterator++;
                 }
-                lastRequest = millis();
-                globalIterator++;
+            }
+            else
+            {
+                globalIterator = reader.getTianBMSData().begin();
             }
         }
-        else
-        {
-            globalIterator = reader.getTianBMSData().begin();
-        }
+        // }
     }
     else
     {
+        /**
+         * This block is to do address(slave) scan, start from slave 1 to 16
+        */
         if (millis() - lastRequest > 500)
         {
-            Error err = MB.addRequest(reader.getToken(slaveCount, TianBMSUtils::REQUEST_SCAN), slaveCount, READ_HOLD_REGISTER, 4096, 1);
+            Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_HOLD_REGISTER, 4096, 1);
             if (err!=SUCCESS) {
                 ModbusError e(err);
                 Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
             }
             else
             {
-                slaveCount++;
+                slavePointer++;
             }
-            if (slaveCount > 16)
+            if (slavePointer >= slave.size())
             {
-                slaveCount = 1;
+                slavePointer = 0;
                 isScanFinished = 1;
             }
             lastRequest = millis();
         }
+        
     }
     
     
