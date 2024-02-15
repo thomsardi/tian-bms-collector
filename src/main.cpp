@@ -19,6 +19,8 @@
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include "esp_log.h"
 
+#include "freertos/semphr.h"
+
 // #define FZ_WITH_ASYNCSRV
 #include <flashz-http.hpp>
 // #include <flashz.hpp>
@@ -30,6 +32,8 @@
 const char *TAG = "ESP32-Tian-BMS-Collector";
 #define FIRMWARE_VERSION 0.1
 
+SemaphoreHandle_t write_mutex = NULL;
+SemaphoreHandle_t read_mutex = NULL;
 
 WiFiClient theClient;                          // Set up a client
 
@@ -49,6 +53,7 @@ std::map<int, TianBMSData>::iterator globalIterator;
 unsigned long lastReconnectMillis;
 unsigned long lastRequest;
 unsigned long lastCleanup;
+unsigned long lastQueueCheck;
 int reconnectInterval = 5000;
 int internalLed = 2;
 
@@ -59,6 +64,7 @@ bool isCleanup = false;
 bool isSlaveChanged = false;
 uint8_t isScanFinished = false;
 uint8_t emptyCount = 0;
+uint8_t failCount = 0;
 
 // put function declarations here:
 
@@ -207,8 +213,14 @@ void handleData(ModbusMessage response, uint32_t token)
             index = response.get(index, content);
             buffer[i] = content;
         }
-        ESP_LOGI(TAG, "update");
-        reader.update(serverId, token, buffer, regCount);
+        if(xSemaphoreTake(write_mutex, 0))
+        {
+            ESP_LOGI(TAG, "mutex on update");
+            ESP_LOGI(TAG, "write mutex taken");
+            reader.update(serverId, token, buffer, regCount);
+            ESP_LOGI(TAG, "write_mutex given");
+            xSemaphoreGive(write_mutex);
+        }
     }
     
     // Serial.printf("Response: serverID=%d, FC=%d, Token=%08X, length=%d:\n", response.getServerID(), response.getFunctionCode(), token, response.size());
@@ -225,15 +237,33 @@ void handleError(Error error, uint32_t token)
     // ModbusError wraps the error code and provides a readable error message for it
     ModbusError me(error);
     Serial.printf("Error response: %02X - %s\n", (int)me, (const char *)me);
-    reader.updateOnError(token);
+    if(xSemaphoreTake(write_mutex, 0))
+    {
+        ESP_LOGI(TAG, "mutex on error update");
+        reader.updateOnError(token);
+        xSemaphoreGive(write_mutex);
+    }
 }
 
 void setup() {
   // put your setup code here, to run once:
+    
     pinMode(internalLed, OUTPUT);
     Serial.begin(115200); 
     Serial.setDebugOutput(true);
     esp_log_level_set(TAG, ESP_LOG_INFO);
+
+    write_mutex = xSemaphoreCreateMutex();
+    if(write_mutex != NULL )
+    {
+        ESP_LOGI(TAG, "Successfully create write mutex");
+    }
+    read_mutex = xSemaphoreCreateMutex();
+    if(read_mutex != NULL )
+    {
+        ESP_LOGI(TAG, "Successfully create read mutex");
+    }
+
     setupLittleFs();
     WiFi.onEvent(WiFiStationConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
     WiFi.onEvent(WiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
@@ -258,9 +288,17 @@ void setup() {
 
     ESP_LOGI(TAG, "Number of slave : %d\n", talis5Memory.getSlaveSize());
 
-    slave.reserve(talis5Memory.getSlaveSize());
+    slave.reserve(255);
     slave.resize(talis5Memory.getSlaveSize());
     talis5Memory.getSlave(slave.data(), talis5Memory.getSlaveSize());
+
+    ESP_LOGI(TAG, "number of stored address : %d\n", talis5Memory.getSlaveSize());
+
+    for (size_t i = 0; i < talis5Memory.getSlaveSize(); i++)
+    {
+        ESP_LOGI(TAG, "address List : %d\n", slave.at(i));
+    }
+
 
   	WifiParams wifiParams;
     wifiParams.mode = wifiSave.getMode(); // 1 to set as AP, 2 to set as STATION, 3 to set AP + STATION
@@ -378,18 +416,20 @@ void setup() {
 
     server.on("/get-test-data", HTTP_GET, [](AsyncWebServerRequest *request)
     {
-        AsyncWebServerResponse *response = request->beginChunkedResponse("text/plain", [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+        std::map<int, TianBMSData> bufferData;
+        reader.getCloneTianBMSData(bufferData);
+        ESP_LOGI(TAG, "buffer data size : %d\n", bufferData.size());
+        AsyncWebServerResponse *response = request->beginChunkedResponse("application/json", [bufferData](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
             //Write up to "maxLen" bytes into "buffer" and return the amount written.
             //index equals the amount of bytes that have been already sent
             //You will be asked for more data until 0 is returned
             //Keep in mind that you can not delay or yield waiting for more data!
+            static auto it = bufferData.begin();
             static bool isTerminated = false;
             static bool isOverflow = false;
-            static auto it = reader.getTianBMSData().begin();
             static String leftOverInput = "";
             TianBMSJsonManager jman;
             int len = 0;
-            
             // This block will execute when the buffer is not enough to store json
             if (isOverflow)
             {
@@ -420,6 +460,7 @@ void setup() {
             // This block will send the json formatted data
             if (index == 0) // send the first open part of the json "{"data" : ["
             {
+                it = bufferData.begin();
                 String startPart = "{\"data\":[";
                 for (size_t i = 0; i < startPart.length(); i++)
                 {
@@ -430,7 +471,7 @@ void setup() {
             }
             else
             {
-                if (it == reader.getTianBMSData().end()) // send the last end part of the json "]}"
+                if (it == bufferData.end()) // send the last end part of the json "]}"
                 {
                     String stopPart = "]}";
                     String input = stopPart;
@@ -445,7 +486,7 @@ void setup() {
                 {
                     String input = jman.buildData((*it).second);
                     it++;
-                    if (it != reader.getTianBMSData().end())
+                    if (it != bufferData.end())
                     {
                         input += ",";
                     }
@@ -464,8 +505,11 @@ void setup() {
                 return len;
             }
         });
+
         response->addHeader("Server","ESP Async Web Server");
-        request->send(response); });
+        request->send(response);
+
+        });
 
     server.on("/get-device-info", HTTP_GET, [](AsyncWebServerRequest *request)
     {
@@ -585,6 +629,7 @@ void setup() {
             status = 200;
             talis5Memory.setSlave(buff.data(), len);
             isSlaveChanged = true;
+            lastQueueCheck = millis();
         }
         String response = handler.buildJsonResponse(status);
         request->send(status, "application/json", response);
@@ -677,54 +722,36 @@ void setup() {
     //     }
     //     });
 
-    // AsyncCallbackJsonWebHandler *setNetwork = new AsyncCallbackJsonWebHandler("/set-network", [](AsyncWebServerRequest *request, JsonVariant &json)
-    // {
-    //     StaticJsonDocument<16> doc;
-    //     String response;
-    //     NetworkSetting setting = jsonManager.parseNetworkSetting(json);
-    //     doc["status"] = setting.flag;
-    //     serializeJson(doc, response);
-    //     if (setting.flag > 0)
-    //     {
-    //         Serial.println("Set network");
-    //         size_t resultLength = Utilities::toDoubleChar(setting.ssid, ssidArr, 8, true);
-    //         // Serial.println(resultLength);
-    //         resultLength = Utilities::toDoubleChar(setting.pass, passArr, 8, true);
-    //         // Serial.println(resultLength);
-    //         IPAddress ip;
-    //         IPAddress gateway;
-    //         IPAddress subnet;
-    //         ip.fromString(setting.ip);
-    //         gateway.fromString(setting.gateway);
-    //         subnet.fromString(setting.subnet);
-    //         for (size_t i = 0; i < 4; i++)
-    //         {
-    //             ipOctet[i] = ip[i];
-    //             // Serial.println(ipOctet[i]);
-    //             gatewayOctet[i] = gateway[i];
-    //             // Serial.println(gatewayOctet[i]);
-    //             subnetOctet[i] = subnet[i];
-    //             // Serial.println(subnetOctet[i]);
-    //         }
-
-    //         gServerType = wifiSetting.getStationServer();
-    //         gMode = wifiSetting.getMode();
-            
-    //         talisMemory.setSsid(setting.ssid.c_str());
-    //         talisMemory.setPass(setting.pass.c_str());
-    //         talisMemory.setIp(setting.ip.c_str());
-    //         talisMemory.setGateway(setting.gateway.c_str());
-    //         talisMemory.setSubnet(setting.subnet.c_str());
-    //         talisMemory.setServer(setting.server);
-    //         talisMemory.setMode(setting.mode);
-
-    //         request->send(200, "application/json", response);
-    //     }
-    //     else
-    //     {
-    //         request->send(400, "application/json", response);
-    //     }
-    // });
+    AsyncCallbackJsonWebHandler *setNetwork = new AsyncCallbackJsonWebHandler("/api/set-network", [](AsyncWebServerRequest *request, JsonVariant &json)
+    {
+        StaticJsonDocument<16> doc;
+        String response;
+        WifiParameterData wifiParameterData;
+        Talis5JsonHandler parser;
+        if (parser.parseSetNetwork(json, wifiParameterData))
+        {
+            ESP_LOGI(TAG, "mode : %d\n", wifiParameterData.mode);
+            ESP_LOGI(TAG, "server : %d\n", wifiParameterData.server);
+            ESP_LOGI(TAG, "ip : %s\n", wifiParameterData.ip.c_str());
+            ESP_LOGI(TAG, "gateway : %s\n", wifiParameterData.gateway.c_str());
+            ESP_LOGI(TAG, "subnet : %s\n", wifiParameterData.subnet.c_str());
+            ESP_LOGI(TAG, "ssid : %s\n", wifiParameterData.ssid.c_str());
+            ESP_LOGI(TAG, "password : %s\n", wifiParameterData.password.c_str());
+            wifiSave.setMode(wifiParameterData.mode);
+            wifiSave.setServer(wifiParameterData.server);
+            wifiSave.setIp(wifiParameterData.ip);
+            wifiSave.setGateway(wifiParameterData.gateway);
+            wifiSave.setSubnet(wifiParameterData.subnet);
+            wifiSave.setSsid(wifiParameterData.ssid);
+            wifiSave.setPassword(wifiParameterData.password);
+            wifiSave.save();
+            request->send(200, "application/json", parser.buildJsonResponse(200));
+        }
+        else
+        {
+            request->send(400, "application/json", parser.buildJsonResponse(400));
+        }
+    });
 
     // AsyncCallbackJsonWebHandler *setFactoryReset = new AsyncCallbackJsonWebHandler("/set-factory-reset", [](AsyncWebServerRequest *request, JsonVariant &json)
     // {
@@ -766,9 +793,9 @@ void setup() {
     // server.addHandler(setLedHandler);
     // server.addHandler(restartCMSHandler);
     // server.addHandler(restartRMSHandler);
-    // server.addHandler(setNetwork);
     // server.addHandler(setFactoryReset);
     // server.addHandler(setSoc);
+    server.addHandler(setNetwork);
     server.addHandler(setSlaveHandler);
     server.begin();
     globalIterator = reader.getTianBMSData().begin();
@@ -829,13 +856,29 @@ void loop() {
     {
         if (MB.pendingRequests() == 0)
         {
-            talis5Memory.save();
-            isScanFinished = false;
-            isSlaveChanged = false;
-            slave.reserve(talis5Memory.getSlaveSize());
-            slave.resize(talis5Memory.getSlaveSize());
-            talis5Memory.getSlave(slave.data(), talis5Memory.getSlaveSize());
-            // reader.getTianBMSData().clear();
+            if (millis() - lastQueueCheck > 3000)
+            {
+                if (xSemaphoreTake(read_mutex, portMAX_DELAY))
+                {
+                    if (xSemaphoreTake(write_mutex, portMAX_DELAY))
+                    {
+                        ESP_LOGI(TAG, "SAVE PARAMETER AND CLEAR");
+                        talis5Memory.save();
+                        isScanFinished = false;
+                        isSlaveChanged = false;
+                        slave.resize(talis5Memory.getSlaveSize());
+                        talis5Memory.getSlave(slave.data(), talis5Memory.getSlaveSize());
+                        reader.getTianBMSData().clear();
+                        xSemaphoreGive(write_mutex);
+                    }
+                    xSemaphoreGive(read_mutex);
+                }
+                lastQueueCheck = millis();
+            }
+        }
+        else
+        {
+            lastQueueCheck = millis();
         }
     }
 
@@ -875,19 +918,19 @@ void loop() {
         */
         if (millis() - lastRequest > 500)
         {
+            ESP_LOGI(TAG, "Slave pointer : %d\n", slavePointer);
+            ESP_LOGI(TAG, "Slave address : %d\n", slave.at(slavePointer));
             Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_HOLD_REGISTER, 4096, 1);
             if (err!=SUCCESS) {
                 ModbusError e(err);
                 Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
             }
-            else
-            {
-                slavePointer++;
-            }
+            slavePointer++;
             if (slavePointer >= slave.size())
             {
                 slavePointer = 0;
                 isScanFinished = 1;
+                globalIterator = reader.getTianBMSData().begin();
             }
             lastRequest = millis();
         }

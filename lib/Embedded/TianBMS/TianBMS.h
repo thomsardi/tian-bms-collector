@@ -157,11 +157,11 @@ class TianBMS
 {
 private:
     /* data */
-    std::map<int, TianBMSData> _bmsData;
     const char* _TAG = "TIANBMS";
     uint32_t _uniqueIdentifier = 12345;
     uint8_t _endianess;
     uint8_t _maxErrorCount = 3;
+    std::map<int, TianBMSData> _bmsData;
     bool updateData(uint8_t id, uint16_t* data, size_t dataSize);
     bool updateOnScan(uint8_t id, uint16_t* data, size_t dataSize);
     bool updatePcbBarcode(uint8_t id, uint16_t* data, size_t dataSize, bool swap = false);
@@ -177,6 +177,7 @@ public:
     void setMaxErrorCount(uint8_t maxErrorCount);
     uint32_t getToken(uint8_t id, TianBMSUtils::RequestType requestType);
     std::map<int, TianBMSData>& getTianBMSData();
+    void getCloneTianBMSData(std::map<int, TianBMSData>& buff);
     uint16_t getPackVoltage(uint8_t id);
     uint16_t getPackCurrent(uint8_t id);
     uint16_t getRemainingCapacity(uint8_t id);
@@ -213,6 +214,7 @@ public:
     TianBMSJsonManager();
     ~TianBMSJsonManager();
     String buildData(const TianBMSData &tianBMSData);
+    String buildEmptyData();
 };
 
 

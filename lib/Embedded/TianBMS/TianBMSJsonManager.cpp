@@ -171,6 +171,14 @@ String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
     
 }
 
+String TianBMSJsonManager::buildEmptyData()
+{
+    String output;
+    StaticJsonDocument<16> doc;
+    JsonArray data = doc.createNestedArray("data");
+    serializeJson(doc, output);
+    return output;
+}
 
 TianBMSJsonManager::~TianBMSJsonManager()
 {

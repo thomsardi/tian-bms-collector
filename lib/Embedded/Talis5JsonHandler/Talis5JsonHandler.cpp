@@ -41,6 +41,33 @@ String Talis5JsonHandler::buildJsonResponse(int code)
     return response;
 }
 
+bool Talis5JsonHandler::parseSetNetwork(JsonVariant &json, WifiParameterData& wifiParameterData)
+{
+    if( !json.containsKey("mode") || !json.containsKey("server") || !json.containsKey("ip") ||
+        !json.containsKey("gateway") || !json.containsKey("subnet") || !json.containsKey("ssid") ||
+        !json.containsKey("password") )
+    {
+        return 0;
+    }
+
+    JsonVariant mode = json["mode"];
+    JsonVariant server = json["server"];
+    JsonVariant ip = json["ip"];
+    JsonVariant gateway = json["gateway"];
+    JsonVariant subnet = json["subnet"];
+    JsonVariant ssid = json["ssid"];
+    JsonVariant password = json["password"];
+
+    wifiParameterData.mode = mode.as<uint8_t>();
+    wifiParameterData.server = server.as<uint8_t>();
+    wifiParameterData.ip = ip.as<String>();
+    wifiParameterData.gateway = gateway.as<String>();
+    wifiParameterData.subnet = subnet.as<String>();
+    wifiParameterData.ssid = ssid.as<String>();
+    wifiParameterData.password = password.as<String>();
+    return 1;
+}
+
 Talis5JsonHandler::~Talis5JsonHandler()
 {
 }

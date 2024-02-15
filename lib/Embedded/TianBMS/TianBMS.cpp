@@ -225,6 +225,11 @@ std::map<int, TianBMSData>& TianBMS::getTianBMSData()
     return _bmsData;
 }
 
+void TianBMS::getCloneTianBMSData(std::map<int, TianBMSData>& buff)
+{
+    buff = _bmsData;
+}
+
 uint16_t TianBMS::getPackVoltage(uint8_t id)
 {
     if (_bmsData.find(id) != _bmsData.end())
