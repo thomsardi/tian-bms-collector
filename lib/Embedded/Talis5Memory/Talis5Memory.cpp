@@ -25,6 +25,7 @@ void Talis5Memory::begin(String name)
     printDefault();
     printUser();
     writeShadow();
+    resetWriteFlag();
 }
 
 void Talis5Memory::createDefault()
@@ -64,6 +65,7 @@ void Talis5Memory::setModbusTargetIp(String ip)
     if (_isActive)
     {
         _shadowParameter.modbusTargetIp = ip;
+        _isIpSet = true;
     }
 }
 
@@ -72,6 +74,7 @@ void Talis5Memory::setModbusPort(uint16_t port)
     if (_isActive)
     {
         _shadowParameter.modbusPort = port;
+        _isPortSet = true;
     }
 }
 
@@ -94,6 +97,7 @@ size_t Talis5Memory::setSlave(const uint8_t* value, size_t len)
         {
             _shadowParameter.slaveList[i] = 0;
         }
+        _isSlaveSet = true;
         return bytesWritten;
     }
     return 0;
@@ -105,25 +109,36 @@ void Talis5Memory::save()
     {
         Preferences preferences;
         preferences.begin(_name.c_str());
-        preferences.putString("u_mbus_ip", _shadowParameter.modbusTargetIp);
-        preferences.putUShort("u_mbus_port", _shadowParameter.modbusPort);
-
-        std::vector<uint8_t> arr;
-        arr.reserve(_shadowParameter.slaveList.size());
-        for (size_t i = 0; i < _shadowParameter.slaveList.size(); i++)
+        if (_isIpSet)
         {
-            uint8_t value = _shadowParameter.slaveList[i];
-            if (value != 0)
-            {
-                arr.push_back(value);
-            }
-            else
-            {
-                break;
-            }
+            preferences.putString("u_mbus_ip", _shadowParameter.modbusTargetIp);
         }
-        preferences.putBytes("u_slave_list", arr.data(), arr.size());
+
+        if(_isPortSet)
+        {
+            preferences.putUShort("u_mbus_port", _shadowParameter.modbusPort);
+        }
+
+        if(_isSlaveSet)
+        {
+            std::vector<uint8_t> arr;
+            arr.reserve(_shadowParameter.slaveList.size());
+            for (size_t i = 0; i < _shadowParameter.slaveList.size(); i++)
+            {
+                uint8_t value = _shadowParameter.slaveList[i];
+                if (value != 0)
+                {
+                    arr.push_back(value);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            preferences.putBytes("u_slave_list", arr.data(), arr.size());
+        }
         preferences.end();
+        resetWriteFlag();
     }
 }
 
@@ -156,6 +171,7 @@ void Talis5Memory::writeShadow()
 void Talis5Memory::cancel()
 {
     writeShadow();
+    resetWriteFlag();
 }
 
 void Talis5Memory::reset()
@@ -186,6 +202,13 @@ void Talis5Memory::clear()
         preferences.end();
         _isActive = false;
     }
+}
+
+void Talis5Memory::resetWriteFlag()
+{
+    _isIpSet = false;
+    _isPortSet = false;
+    _isSlaveSet = false;
 }
 
 String Talis5Memory::getModbusTargetIp()

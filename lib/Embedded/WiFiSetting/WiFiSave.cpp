@@ -33,8 +33,8 @@ void WiFiSave::createDefault()
     ssid.replace(":", "");
     Preferences preferences;
     preferences.begin(_name.c_str());
-    preferences.putUChar("d_mode", 1);
-    preferences.putUChar("d_svr", 1);
+    preferences.putUChar("d_mode", 1); // set to AP
+    preferences.putUChar("d_svr", 1); // set to STATIC
     preferences.putString("d_ip", "192.168.4.1");
     preferences.putString("d_gateway", "192.168.4.1");
     preferences.putString("d_subnet", "255.255.255.0");

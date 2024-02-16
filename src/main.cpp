@@ -54,6 +54,7 @@ unsigned long lastReconnectMillis;
 unsigned long lastRequest;
 unsigned long lastCleanup;
 unsigned long lastQueueCheck;
+unsigned long lastRestartMillis;
 int reconnectInterval = 5000;
 int internalLed = 2;
 
@@ -62,6 +63,7 @@ uint8_t slavePointer = 0;
 bool isRestart = false;
 bool isCleanup = false;
 bool isSlaveChanged = false;
+bool isScan = false;
 uint8_t isScanFinished = false;
 uint8_t emptyCount = 0;
 uint8_t failCount = 0;
@@ -369,8 +371,10 @@ void setup() {
     MB.setTimeout(2000, 200);
     MB.begin();
     IPAddress ip;
-    ip.fromString(talis5Memory.getModbusTargetIp());
-    MB.setTarget(ip, talis5Memory.getModbusPort());
+    if (ip.fromString(talis5Memory.getModbusTargetIp()))
+    {
+        MB.setTarget(ip, talis5Memory.getModbusPort());
+    }
     // MB.setTarget(IPAddress(192, 168, 2, 113), 502);
 
 
@@ -414,7 +418,7 @@ void setup() {
         request->send(LittleFS, "/assets/favicon.ico", "image/x-icon");
     });
 
-    server.on("/get-test-data", HTTP_GET, [](AsyncWebServerRequest *request)
+    server.on("/api/get-data", HTTP_GET, [](AsyncWebServerRequest *request)
     {
         std::map<int, TianBMSData> bufferData;
         reader.getCloneTianBMSData(bufferData);
@@ -511,7 +515,7 @@ void setup() {
 
         });
 
-    server.on("/get-device-info", HTTP_GET, [](AsyncWebServerRequest *request)
+    server.on("/api/get-device-info", HTTP_GET, [](AsyncWebServerRequest *request)
     {
         String output;
         StaticJsonDocument<256> doc;
@@ -540,7 +544,7 @@ void setup() {
         serializeJson(doc, output);
         request->send(200, "application/json", output); });
 
-    server.on("/get-active-slave", HTTP_GET, [](AsyncWebServerRequest *request)
+    server.on("/api/get-active-slave", HTTP_GET, [](AsyncWebServerRequest *request)
     {
         StaticJsonDocument<768> doc;
         String output;
@@ -636,100 +640,58 @@ void setup() {
         return;
     });
 
-    // AsyncCallbackJsonWebHandler *setAddressHandler = new AsyncCallbackJsonWebHandler("/set-addressing", [](AsyncWebServerRequest *request, JsonVariant &json)
-    // {
-    //     String input = json.as<String>();
-    //     StaticJsonDocument<16> doc;
-    //     String response;
-    //     int status = jsonManager.jsonAddressingCommandParser(input.c_str());
-    //     doc["status"] = status;
-    //     serializeJson(doc, response);
-    //     if (status >= 0)
-    //     {
-    //         if (status)
-    //         {
-    //             isAddressing = true;
-    //         }
-    //         else
-    //         {
-    //             isAddressing = false;
-    //         }
-    //         request->send(200, "application/json", response);
-    //     }
-    //     else
-    //     {
-    //         request->send(400, "application/json", response);
-    //     }
-    //     });
+    AsyncCallbackJsonWebHandler *setScanHandler = new AsyncCallbackJsonWebHandler("/api/scan", [](AsyncWebServerRequest *request, JsonVariant &json)
+    {
+        Talis5JsonHandler handler;
+        int status = 400;
+        if (handler.parseModbusScan(json))
+        {
+            status = 200;
+            isScan = true;
+        }
+        request->send(status, "application/json", handler.buildJsonResponse(status));
+        });
 
-    // AsyncCallbackJsonWebHandler *setDataCollectionHandler = new AsyncCallbackJsonWebHandler("/set-data-collection", [](AsyncWebServerRequest *request, JsonVariant &json)
-    // {
-    //     String input = json.as<String>();
-    //     StaticJsonDocument<16> doc;
-    //     String response;
-    //     int status = jsonManager.jsonDataCollectionCommandParser(input.c_str());
-    //     doc["status"] = status;
-    //     serializeJson(doc, response);
-    //     dataCollectionCommand.exec = status;
-    //     request->send(200, "application/json", response); });
+    AsyncCallbackJsonWebHandler *setModbus = new AsyncCallbackJsonWebHandler("/api/set-modbus", [](AsyncWebServerRequest *request, JsonVariant &json)
+    {
+        Talis5JsonHandler handler;
+        Talis5ParameterData param;
+        int status = 400;
+        if (handler.parseSetModbus(json, param))
+        {
+            status = 200;
+            talis5Memory.setModbusTargetIp(param.modbusTargetIp);
+            talis5Memory.setModbusPort(param.modbusPort);
+            talis5Memory.save();
+            IPAddress ip;
+            if (ip.fromString(param.modbusTargetIp))
+            {
+                MB.setTarget(ip, param.modbusPort);
+            }
+        }
+        request->send(status, "application/json", handler.buildJsonResponse(status));
+        });
 
-    // AsyncCallbackJsonWebHandler *restartRMSHandler = new AsyncCallbackJsonWebHandler("/restart", [](AsyncWebServerRequest *request, JsonVariant &json)
-    // {
-    //     String input = json.as<String>();
-    //     StaticJsonDocument<16> doc;
-    //     String response;
-    //     int status = jsonManager.jsonRMSRestartParser(input.c_str());
-    //     doc["status"] = status;
-    //     serializeJson(doc, response);
-    //     if (status >= 0)
-    //     {
-    //         if (status > 0)
-    //         {
-    //             rmsRestartCommand.restart = true;
-    //         }
-    //         request->send(200, "application/json", response);
-    //     }
-    //     else
-    //     {
-    //         request->send(400, "application/json", response);
-    //     }
-    //     });
-
-    // AsyncCallbackJsonWebHandler *setFrameHandler = new AsyncCallbackJsonWebHandler("/set-frame", [](AsyncWebServerRequest *request, JsonVariant &json)
-    // {
-    //     String input = json.as<String>(); 
-    //     StaticJsonDocument<16> doc;
-    //     String response;
-    //     SlaveWrite slaveWrite;
-    //     int status = jsonManager.jsonCMSFrameParser(input.c_str(), slaveWrite);
-    //     doc["status"] = status;
-    //     serializeJson(doc, response);
-    //     if (status >= 0)
-    //     {
-    //         if (status > 0)
-    //         {
-    //             TalisRS485TxMessage txMsg;
-    //             txMsg.token = TalisRS485::RequestType::CMSFRAMEWRITE;
-    //             txMsg.id = slaveWrite.bid;
-    //             TalisRS485Message::createCMSFrameWriteIdRequest(txMsg, slaveWrite.content);
-    //             userCommand.push_back(txMsg);
-    //         }
-    //         request->send(200, "application/json", response);
-    //     }
-    //     else
-    //     {
-    //         request->send(400, "application/json", response);
-    //     }
-    //     });
+    AsyncCallbackJsonWebHandler *restartHandler = new AsyncCallbackJsonWebHandler("/api/restart", [](AsyncWebServerRequest *request, JsonVariant &json)
+    {
+        Talis5JsonHandler handler;
+        int status = 400;
+        if (handler.parseRestart(json))
+        {
+            status = 200;
+            isRestart = true;
+        }
+        request->send(status, "application/json", handler.buildJsonResponse(status));
+        });
 
     AsyncCallbackJsonWebHandler *setNetwork = new AsyncCallbackJsonWebHandler("/api/set-network", [](AsyncWebServerRequest *request, JsonVariant &json)
     {
-        StaticJsonDocument<16> doc;
-        String response;
+        int status = 400;
         WifiParameterData wifiParameterData;
         Talis5JsonHandler parser;
         if (parser.parseSetNetwork(json, wifiParameterData))
         {
+            status = 200;
             ESP_LOGI(TAG, "mode : %d\n", wifiParameterData.mode);
             ESP_LOGI(TAG, "server : %d\n", wifiParameterData.server);
             ESP_LOGI(TAG, "ip : %s\n", wifiParameterData.ip.c_str());
@@ -745,63 +707,34 @@ void setup() {
             wifiSave.setSsid(wifiParameterData.ssid);
             wifiSave.setPassword(wifiParameterData.password);
             wifiSave.save();
-            request->send(200, "application/json", parser.buildJsonResponse(200));
         }
-        else
-        {
-            request->send(400, "application/json", parser.buildJsonResponse(400));
-        }
+        request->send(status, "application/json", parser.buildJsonResponse(status));
     });
 
-    // AsyncCallbackJsonWebHandler *setFactoryReset = new AsyncCallbackJsonWebHandler("/set-factory-reset", [](AsyncWebServerRequest *request, JsonVariant &json)
-    // {
-    //     StaticJsonDocument<16> doc;
-    //     String response;
-    //     int status = jsonManager.parseFactoryReset(json);
-    //     doc["status"] = status;
-    //     serializeJson(doc, response);
-    //     if (status == 1 || status == 0)
-    //     {
-    //         if (status)
-    //         {
-    //             factoryReset = 1;
-    //         }
-    //         request->send(200, "application/json", response);
-    //     }
-    //     else
-    //     {
-    //         request->send(400, "application/json", response);
-    //     }
-        
-    // });
+    AsyncCallbackJsonWebHandler *setFactoryReset = new AsyncCallbackJsonWebHandler("/api/freset", [](AsyncWebServerRequest *request, JsonVariant &json)
+    {
+        Talis5JsonHandler handler;
+        int status = 400;
+        if (handler.parseFactoryReset(json))
+        {
+            status = 200;
+            talis5Memory.reset();
+            wifiSave.reset();
+            isRestart = true;
+        }
+        request->send(status, "application/json", handler.buildJsonResponse(status));
+    });
 
-    // server.addHandler(setBalancingHandler);
-    // server.addHandler(setAddressHandler);
-    // server.addHandler(setAlarmHandler);
-    // server.addHandler(setDataCollectionHandler);
-    // server.addHandler(setAlarmParamHandler);
-    // server.addHandler(setHardwareAlarmHandler);
-    // server.addHandler(setSleepHandler);
-    // server.addHandler(setWakeupHandler);
-    // server.addHandler(setRmsCodeHandler);
-    // server.addHandler(setRackSnHandler);
-    // server.addHandler(setFrameHandler);
-    // server.addHandler(setCmsCodeHandler);
-    // server.addHandler(setBaseCodeHandler);
-    // server.addHandler(setMcuCodeHandler);
-    // server.addHandler(setSiteLocationHandler);
-    // server.addHandler(setLedHandler);
-    // server.addHandler(restartCMSHandler);
-    // server.addHandler(restartRMSHandler);
-    // server.addHandler(setFactoryReset);
-    // server.addHandler(setSoc);
     server.addHandler(setNetwork);
     server.addHandler(setSlaveHandler);
+    server.addHandler(setScanHandler);
+    server.addHandler(setModbus);
+    server.addHandler(restartHandler);
+    server.addHandler(setFactoryReset);
     server.begin();
     globalIterator = reader.getTianBMSData().begin();
     lastRequest = millis();
     lastCleanup = millis();
-    
 }
 
 void loop() {
@@ -852,7 +785,7 @@ void loop() {
     //     lastCleanup = millis();
     // }
 
-    if(isSlaveChanged)
+    if(isSlaveChanged || isScan)
     {
         if (MB.pendingRequests() == 0)
         {
@@ -862,12 +795,21 @@ void loop() {
                 {
                     if (xSemaphoreTake(write_mutex, portMAX_DELAY))
                     {
-                        ESP_LOGI(TAG, "SAVE PARAMETER AND CLEAR");
-                        talis5Memory.save();
+                        // check if the signal is coming from slave changed flag, the new setting need to be written, if not it is coming from rescan flag
+                        if (isSlaveChanged) 
+                        {
+                            ESP_LOGI(TAG, "SAVE PARAMETER AND CLEAR");
+                            talis5Memory.save();
+                            slave.resize(talis5Memory.getSlaveSize());
+                            talis5Memory.getSlave(slave.data(), talis5Memory.getSlaveSize());
+                        }
+                        else
+                        {
+                            ESP_LOGI(TAG, "RESCAN");
+                        }
                         isScanFinished = false;
                         isSlaveChanged = false;
-                        slave.resize(talis5Memory.getSlaveSize());
-                        talis5Memory.getSlave(slave.data(), talis5Memory.getSlaveSize());
+                        isScan = false;
                         reader.getTianBMSData().clear();
                         xSemaphoreGive(write_mutex);
                     }
@@ -889,7 +831,7 @@ void loop() {
         */
         // if (!isCleanup) // this flag is to detect if it's time to do cleanup, then pause the .addRequest
         // { 
-        if (!isSlaveChanged)
+        if (!isSlaveChanged && !isScan)
         {
             if (globalIterator != reader.getTianBMSData().end())
             {
@@ -934,7 +876,6 @@ void loop() {
             }
             lastRequest = millis();
         }
-        
     }
     
     

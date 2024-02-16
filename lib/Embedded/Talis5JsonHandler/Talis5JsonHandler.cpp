@@ -68,6 +68,68 @@ bool Talis5JsonHandler::parseSetNetwork(JsonVariant &json, WifiParameterData& wi
     return 1;
 }
 
+bool Talis5JsonHandler::parseModbusScan(JsonVariant &json)
+{
+    if (!json.containsKey("scan"))
+    {
+        return 0;
+    }
+
+    JsonVariant scan = json["scan"];
+
+    if (scan.as<int>() > 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+bool Talis5JsonHandler::parseSetModbus(JsonVariant &json, Talis5ParameterData& talis5ParameterData)
+{
+    if (!json.containsKey("ip") || !json.containsKey("port"))
+    {
+        return 0;
+    }
+
+    JsonVariant ip = json["ip"];
+    JsonVariant port = json["port"];
+    talis5ParameterData.modbusTargetIp = ip.as<String>();
+    talis5ParameterData.modbusPort = port.as<int>();
+    return 1;
+}
+
+bool Talis5JsonHandler::parseRestart(JsonVariant& json)
+{
+    if (!json.containsKey("restart"))
+    {
+        return 0;
+    }
+
+    JsonVariant restart = json["restart"];
+
+    if (restart.as<int>() > 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+bool Talis5JsonHandler::parseFactoryReset(JsonVariant& json)
+{
+    if (!json.containsKey("freset"))
+    {
+        return 0;
+    }
+
+    JsonVariant freset = json["freset"];
+
+    if (freset.as<int>() > 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
 Talis5JsonHandler::~Talis5JsonHandler()
 {
 }

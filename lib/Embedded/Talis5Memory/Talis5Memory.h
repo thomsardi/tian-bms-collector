@@ -29,9 +29,13 @@ private:
     Talis5ParameterData _shadowParameter;
     String _name;
     bool _isActive = false;
+    bool _isIpSet = false;
+    bool _isPortSet = false;
+    bool _isSlaveSet = false;
     void copy();
     void createDefault();
     void writeShadow();
+    void resetWriteFlag();
 public:
     Talis5Memory(/* args */);
     void printDefault();

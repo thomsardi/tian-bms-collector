@@ -8,8 +8,8 @@
 #include <WiFi.h>
 
 struct WifiParameterData {
-    uint8_t mode;
-    uint8_t server;
+    uint8_t mode; // 1 = AP, 2 = STATION, 3 = AP+STATION
+    uint8_t server; // 1 = STATIC, 2 = DHCP
     String ip;
     String gateway;
     String subnet;
