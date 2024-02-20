@@ -185,6 +185,11 @@ void WiFiSave::restart()
     begin(_name);
 }
 
+/**
+ * Get mode of the configuration
+ * 
+ * return   mode of the configuration, 1 for AP, 2 for Station, 3 for AP + Station
+*/
 uint8_t WiFiSave::getMode()
 {
     if (_isActive)

@@ -1,5 +1,5 @@
 window.onload = function() {
-  fetchData('/get-device-info', changeDeviceInfoContent);
+  fetchData('/api/get-device-info', changeDeviceInfoContent);
 }
 
 function fetchData(url, callback) {
@@ -30,6 +30,11 @@ function changeDeviceInfoContent(data) {
     spanElement.textContent = data['firmware_version'];
   }
 
+  if('mode' in data) {
+    const spanElement = document.getElementById('device-mode');
+    spanElement.textContent = data['mode'];
+  }
+
   if('device_ip' in data) {
     const spanElement = document.getElementById('device-ip');
     spanElement.textContent = data['device_ip'];
@@ -53,7 +58,7 @@ function changeDeviceInfoContent(data) {
 
 function onClickReboot() {
   const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/restart");
+  xhr.open("POST", "/api/restart");
   xhr.setRequestHeader("Content-Type", "application/json");
   xhr.onload = function () {
     if (xhr.status === 200) {
@@ -68,7 +73,7 @@ function onClickReboot() {
 
 function onClickFactoryReset() {
   const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/set-factory-reset");
+  xhr.open("POST", "/api/freset");
   xhr.setRequestHeader("Content-Type", "application/json");
   xhr.onload = function () {
     if (xhr.status === 200) {
@@ -78,5 +83,5 @@ function onClickFactoryReset() {
       console.error("Error:", xhr.status);
     }
   };
-  xhr.send(JSON.stringify({"factory_reset" : 1}));
+  xhr.send(JSON.stringify({"freset" : 1}));
 }

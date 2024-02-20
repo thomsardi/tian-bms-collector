@@ -177,6 +177,7 @@ public:
     void setMaxErrorCount(uint8_t maxErrorCount);
     uint32_t getToken(uint8_t id, TianBMSUtils::RequestType requestType);
     std::map<int, TianBMSData>& getTianBMSData();
+    void clearData();
     void getCloneTianBMSData(std::map<int, TianBMSData>& buff);
     uint16_t getPackVoltage(uint8_t id);
     uint16_t getPackCurrent(uint8_t id);

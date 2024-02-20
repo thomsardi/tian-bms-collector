@@ -27,19 +27,19 @@ document.getElementById("uploadForm").addEventListener("submit", function (e) {
   if (flashRadioButton.checked) {
     console.log("Flash button checked");
     if (fileExtension == "zz") {
-      xhr.open("POST", "/update-compressed-firmware", true);
+      xhr.open("POST", "/api/update-compressed-firmware", true);
     }
     else {
-      xhr.open("POST", "/update-firmware", true);
+      xhr.open("POST", "/api/update-firmware", true);
     }
   }
   if (filesystemRadioButton.checked) {
     console.log("Filesystem button checked");
     if (fileExtension == "zz") {
-      xhr.open("POST", "/update-compressed-filesystem", true);
+      xhr.open("POST", "/api/update-compressed-filesystem", true);
     }
     else {
-      xhr.open("POST", "/update-filesystem", true);
+      xhr.open("POST", "/api/update-filesystem", true);
     }
     
   }

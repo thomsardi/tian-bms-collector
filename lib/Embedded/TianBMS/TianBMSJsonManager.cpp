@@ -21,12 +21,12 @@ String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
 
     JsonObject pack_current = doc.createNestedObject("pack_current");
     pack_current["unit"] = "A";
-    pack_current["divider"] = 10;
+    pack_current["divider"] = 100;
     pack_current["value"] = tianBMSData.packCurrent;
 
     JsonObject remaining_capacity = doc.createNestedObject("remaining_capacity");
     remaining_capacity["unit"] = "Ah";
-    remaining_capacity["divider"] = 10;
+    remaining_capacity["divider"] = 100;
     remaining_capacity["value"] = tianBMSData.remainingCapacity;
 
     JsonObject average_cell_temperature = doc.createNestedObject("average_cell_temperature");
@@ -92,7 +92,7 @@ String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
 
     JsonObject full_charged_cap = doc.createNestedObject("full_charged_cap");
     full_charged_cap["unit"] = "Ah";
-    full_charged_cap["divider"] = 10;
+    full_charged_cap["divider"] = 100;
     full_charged_cap["value"] = tianBMSData.fullChargedCap;
 
     JsonObject cycle_count = doc.createNestedObject("cycle_count");

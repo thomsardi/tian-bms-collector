@@ -220,6 +220,11 @@ uint32_t TianBMS::getToken(uint8_t id, TianBMSUtils::RequestType requestType)
     return token;
 }
 
+void TianBMS::clearData()
+{
+    _bmsData.clear();
+}
+
 std::map<int, TianBMSData>& TianBMS::getTianBMSData()
 {
     return _bmsData;

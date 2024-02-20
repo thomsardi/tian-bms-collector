@@ -522,11 +522,25 @@ void setup() {
         doc["firmware_version"] = FIRMWARE_VERSION;
         if (wifiSave.getMode() == 1)
         {
+            doc["mode"] = "AP";
             doc["device_ip"] = WiFi.softAPIP().toString(); 
             doc["ssid"] = WiFi.softAPSSID();
         }
         else
         {
+            switch (wifiSave.getMode())
+            {
+            case 2:
+                /* code */
+                doc["mode"] = "STATION";
+                break;
+            case 3:
+                doc["mode"] = "AP + STATION";
+                break;
+            default:
+                break;
+            }
+            
             doc["device_ip"] = WiFi.localIP().toString(); 
             doc["ssid"] = WiFi.SSID();
         }
@@ -560,28 +574,7 @@ void setup() {
 
         request->send(200, "application/json", output); });
 
-    // server.on("/get-cms-data", HTTP_GET, [](AsyncWebServerRequest *request)
-    // {
-    //     // String jsonOutput = jsonManager.buildJsonData(request, cellData, cellDataArrSize);
-    //     String jsonOutput = jsonManager.buildJsonData(request, packedData);
-    //     request->send(200, "application/json", jsonOutput); });
-
-    // server.on("/get-addressing-status", HTTP_GET, [](AsyncWebServerRequest *request)
-    // {
-    //     AddressingStatus addressingStatus;
-    //     addressingStatus.numOfDevice = addressList.size();
-    //     Serial.println("Number of Device : " + String(addressingStatus.numOfDevice));
-    //     for (int i = 0; i < addressList.size(); i++)
-    //     {
-    //         addressingStatus.deviceAddressList[i] = addressList.at(i);
-    //         Serial.println(addressingStatus.deviceAddressList[i]);
-    //     }
-    //     addressingStatus.status = isAddressed;
-    //     Serial.println("Addressing Completed Flag : " + String(addressingStatus.status));
-    //     String jsonOutput = jsonManager.buildJsonAddressingStatus(addressingStatus, addressList.size());
-    //     request->send(200, "application/json", jsonOutput); });
-
-    server.on("/update-firmware", HTTP_POST, [](AsyncWebServerRequest *request){
+    server.on("/api/update-firmware", HTTP_POST, [](AsyncWebServerRequest *request){
         String output;
         int code = 200;
         StaticJsonDocument<16> doc;
@@ -592,7 +585,7 @@ void setup() {
         // lastTime = millis();
     }, handleFirmwareUpload);
 
-    server.on("/update-compressed-firmware", HTTP_POST, [](AsyncWebServerRequest *request){
+    server.on("/api/update-compressed-firmware", HTTP_POST, [](AsyncWebServerRequest *request){
         String output;
         int code = 200;
         StaticJsonDocument<16> doc;
@@ -602,7 +595,7 @@ void setup() {
         isRestart = true;
     }, handleCompressedUpload);
 
-    server.on("/update-filesystem", HTTP_POST, [](AsyncWebServerRequest *request){
+    server.on("/api/update-filesystem", HTTP_POST, [](AsyncWebServerRequest *request){
         String output;
         int code = 200;
         StaticJsonDocument<16> doc;
@@ -612,7 +605,7 @@ void setup() {
         isRestart = true;
     }, handleFilesystemUpload);
 
-    server.on("/update-compressed-filesystem", HTTP_POST, [](AsyncWebServerRequest *request){
+    server.on("/api/update-compressed-filesystem", HTTP_POST, [](AsyncWebServerRequest *request){
         String output;
         int code = 200;
         StaticJsonDocument<16> doc;
@@ -810,7 +803,7 @@ void loop() {
                         isScanFinished = false;
                         isSlaveChanged = false;
                         isScan = false;
-                        reader.getTianBMSData().clear();
+                        reader.clearData();
                         xSemaphoreGive(write_mutex);
                     }
                     xSemaphoreGive(read_mutex);
@@ -831,7 +824,7 @@ void loop() {
         */
         // if (!isCleanup) // this flag is to detect if it's time to do cleanup, then pause the .addRequest
         // { 
-        if (!isSlaveChanged && !isScan)
+        if (!isSlaveChanged && !isScan) // if it is not scan or not slave changed, do normal polling
         {
             if (globalIterator != reader.getTianBMSData().end())
             {
@@ -843,12 +836,12 @@ void loop() {
                         Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
                     }
                     lastRequest = millis();
-                    globalIterator++;
+                    globalIterator++; // increment the iterator to the next element
                 }
             }
             else
             {
-                globalIterator = reader.getTianBMSData().begin();
+                globalIterator = reader.getTianBMSData().begin(); // get the iterator of the first element of data
             }
         }
         // }
