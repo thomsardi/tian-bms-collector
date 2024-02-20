@@ -558,12 +558,31 @@ void setup() {
         serializeJson(doc, output);
         request->send(200, "application/json", output); });
 
+    server.on("/api/get-modbus-info", HTTP_GET, [](AsyncWebServerRequest *request)
+    {
+        StaticJsonDocument<192> doc;
+        String output;
+        doc["modbus_ip"] = talis5Memory.getModbusTargetIp();
+        doc["port"] = talis5Memory.getModbusPort();
+        std::vector<uint8_t> buff;
+        buff.reserve(255);
+        buff.resize(talis5Memory.getSlaveSize());
+        talis5Memory.getSlave(buff.data(), talis5Memory.getSlaveSize());
+        JsonArray slave_list = doc.createNestedArray("slave_list");
+        for (size_t i = 0; i < buff.size(); i++)
+        {
+            slave_list.add(buff.at(i));
+        }
+
+        serializeJson(doc, output);
+        request->send(200, "application/json", output); });
+
     server.on("/api/get-active-slave", HTTP_GET, [](AsyncWebServerRequest *request)
     {
         StaticJsonDocument<768> doc;
         String output;
-        doc["address-status"] = isScanFinished;
-        JsonArray slave_list = doc.createNestedArray("slave-list");
+        doc["address_status"] = isScanFinished;
+        JsonArray slave_list = doc.createNestedArray("slave_list");
         std::map<int, TianBMSData>::iterator it;
         for (it = reader.getTianBMSData().begin(); it != reader.getTianBMSData().end(); it++)
         {

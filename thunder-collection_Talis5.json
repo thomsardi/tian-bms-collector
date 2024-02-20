@@ -1,0 +1,151 @@
+{
+    "client": "Thunder Client",
+    "collectionName": "Talis5",
+    "dateExported": "2024-02-20T07:00:44.195Z",
+    "version": "1.1",
+    "folders": [],
+    "requests": [
+        {
+            "_id": "4797795e-0341-4624-8bee-910d51b110ab",
+            "colId": "c81d071d-e736-4af5-8955-63c46cc61daa",
+            "containerId": "",
+            "name": "Get Data",
+            "url": "get-data",
+            "method": "GET",
+            "sortNum": 10000,
+            "created": "2024-02-16T04:09:06.997Z",
+            "modified": "2024-02-20T02:58:12.629Z",
+            "headers": [],
+            "params": [],
+            "tests": []
+        },
+        {
+            "_id": "8f068161-c7c9-4f57-a6ed-bbd4ac09402d",
+            "colId": "c81d071d-e736-4af5-8955-63c46cc61daa",
+            "containerId": "",
+            "name": "Get Modbus Info",
+            "url": "get-modbus-info",
+            "method": "GET",
+            "sortNum": 12500,
+            "created": "2024-02-20T06:59:29.371Z",
+            "modified": "2024-02-20T06:59:45.480Z",
+            "headers": [],
+            "params": [],
+            "tests": []
+        },
+        {
+            "_id": "62fdda98-d683-431d-9b99-6e0f71f1d56a",
+            "colId": "c81d071d-e736-4af5-8955-63c46cc61daa",
+            "containerId": "",
+            "name": "Get Device Info",
+            "url": "get-device-info",
+            "method": "GET",
+            "sortNum": 15000,
+            "created": "2024-02-20T03:01:53.556Z",
+            "modified": "2024-02-20T03:02:13.807Z",
+            "headers": [],
+            "params": [],
+            "tests": []
+        },
+        {
+            "_id": "f6ed6ad4-1e5a-46ee-97c8-ef97a5c0a798",
+            "colId": "c81d071d-e736-4af5-8955-63c46cc61daa",
+            "containerId": "",
+            "name": "Restart",
+            "url": "restart",
+            "method": "POST",
+            "sortNum": 20000,
+            "created": "2024-02-20T02:56:44.870Z",
+            "modified": "2024-02-20T02:58:20.382Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n    \"restart\" : 1\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "66967894-85d5-4d2e-9b4b-b1f11a0299de",
+            "colId": "c81d071d-e736-4af5-8955-63c46cc61daa",
+            "containerId": "",
+            "name": "Set Slave",
+            "url": "set-slave",
+            "method": "POST",
+            "sortNum": 30000,
+            "created": "2024-02-20T02:56:59.900Z",
+            "modified": "2024-02-20T07:00:02.357Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n  \"slave_set\": 1,\n  \"slave_list\": [\n  1,2,3,4\n  ]\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "e9ea3201-0ab9-4a18-acd4-81d21dc7d9f8",
+            "colId": "c81d071d-e736-4af5-8955-63c46cc61daa",
+            "containerId": "",
+            "name": "Set Modbus Configuration",
+            "url": "set-modbus",
+            "method": "POST",
+            "sortNum": 40000,
+            "created": "2024-02-20T02:57:16.596Z",
+            "modified": "2024-02-20T02:58:30.885Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n    \"ip\" : \"192.168.2.113\",\n    \"port\" : 502\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "f6fdbcb2-b901-43a5-8660-d12449e4396a",
+            "colId": "c81d071d-e736-4af5-8955-63c46cc61daa",
+            "containerId": "",
+            "name": "Factory Reset",
+            "url": "freset",
+            "method": "POST",
+            "sortNum": 50000,
+            "created": "2024-02-20T02:57:26.907Z",
+            "modified": "2024-02-20T02:58:36.150Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n    \"freset\" : 1\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "4e75c7bc-388f-4952-9235-6f0f6d5ee98d",
+            "colId": "c81d071d-e736-4af5-8955-63c46cc61daa",
+            "containerId": "",
+            "name": "Set Network Configuration",
+            "url": "set-network",
+            "method": "POST",
+            "sortNum": 60000,
+            "created": "2024-02-20T02:57:37.515Z",
+            "modified": "2024-02-20T02:58:41.133Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n    \"mode\" : 2,\n    \"server\" : 1,\n    \"ip\" : \"192.168.2.144\",\n    \"gateway\" : \"192.168.2.1\",\n    \"subnet\" : \"255.255.255.0\",\n    \"ssid\" : \"RnD_Sundaya\",\n    \"password\" : \"sundaya22\"\n}",
+                "form": []
+            },
+            "tests": []
+        }
+    ],
+    "settings": {
+        "options": {
+            "baseUrl": "http://192.168.2.144/api/"
+        }
+    }
+}

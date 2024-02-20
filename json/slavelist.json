@@ -1,6 +1,6 @@
 {
-    "address-status" : 1,
-    "slave-list" : [
+    "address_status" : 1,
+    "slave_list" : [
         1,2,3,4,5,6
     ]
 }

@@ -4,6 +4,11 @@ Talis5Memory::Talis5Memory(/* args */)
 {
 }
 
+/**
+ * begin the preference namespace, write the default setting and init flag
+ * 
+ * @param[in]   name    name for preference namespace
+*/
 void Talis5Memory::begin(String name)
 {
     Preferences preferences;
@@ -28,6 +33,9 @@ void Talis5Memory::begin(String name)
     resetWriteFlag();
 }
 
+/**
+ * create default parameter
+*/
 void Talis5Memory::createDefault()
 {
     Preferences preferences;
@@ -45,6 +53,9 @@ void Talis5Memory::createDefault()
     preferences.end();
 }
 
+/**
+ * copy default parameter into user parameter
+*/
 void Talis5Memory::copy()
 {
     Preferences preferences;
@@ -60,6 +71,11 @@ void Talis5Memory::copy()
     preferences.end();
 }
 
+/**
+ * set modbus target ip
+ * 
+ * @param[in]   ip  target ip
+*/
 void Talis5Memory::setModbusTargetIp(String ip)
 {
     if (_isActive)
@@ -69,6 +85,11 @@ void Talis5Memory::setModbusTargetIp(String ip)
     }
 }
 
+/**
+ * set modbus target port
+ * 
+ * @param[in]   port  target port
+*/
 void Talis5Memory::setModbusPort(uint16_t port)
 {
     if (_isActive)
@@ -78,6 +99,14 @@ void Talis5Memory::setModbusPort(uint16_t port)
     }
 }
 
+/**
+ * set modbus slave list for polling
+ * 
+ * @param[in]   value   pointer to array of uint8_t
+ * @param[in]   len     length of the array
+ * 
+ * @return  number of slave when success, 0 when failed or no input
+*/
 size_t Talis5Memory::setSlave(const uint8_t* value, size_t len)
 {
     if (_shadowParameter.slaveList.size() < len)
@@ -103,6 +132,9 @@ size_t Talis5Memory::setSlave(const uint8_t* value, size_t len)
     return 0;
 }
 
+/**
+ * write and save into preference memory
+*/
 void Talis5Memory::save()
 {
     if (_isActive)
@@ -142,6 +174,9 @@ void Talis5Memory::save()
     }
 }
 
+/**
+ * write shadow register from user parameter
+*/
 void Talis5Memory::writeShadow()
 {
     if (_isActive)
@@ -168,12 +203,18 @@ void Talis5Memory::writeShadow()
     }
 }
 
+/**
+ * cancel the recent input and revert back the into last known parameter
+*/
 void Talis5Memory::cancel()
 {
     writeShadow();
     resetWriteFlag();
 }
 
+/**
+ * reset into default parameter
+*/
 void Talis5Memory::reset()
 {
     if (_isActive)
@@ -187,11 +228,17 @@ void Talis5Memory::reset()
     }
 }
 
+/**
+ * restart the object
+*/
 void Talis5Memory::restart()
 {
     begin(_name);
 }
 
+/**
+ * clear all preferences keys
+*/
 void Talis5Memory::clear()
 {
     if (_isActive)
@@ -204,6 +251,9 @@ void Talis5Memory::clear()
     }
 }
 
+/**
+ * reset write flag
+*/
 void Talis5Memory::resetWriteFlag()
 {
     _isIpSet = false;
@@ -211,6 +261,11 @@ void Talis5Memory::resetWriteFlag()
     _isSlaveSet = false;
 }
 
+/**
+ * get modbus target ip
+ * 
+ * @return  modbus target ip as string
+*/
 String Talis5Memory::getModbusTargetIp()
 {
     if (_isActive)
@@ -224,6 +279,11 @@ String Talis5Memory::getModbusTargetIp()
     return "";
 }
 
+/**
+ * get modbus port
+ * 
+ * @return  modbus target port
+*/
 uint16_t Talis5Memory::getModbusPort()
 {
     if (_isActive)
@@ -237,6 +297,11 @@ uint16_t Talis5Memory::getModbusPort()
     return 0;
 }
 
+/**
+ * get slave size
+ * 
+ * @return  size of registered slave
+*/
 size_t Talis5Memory::getSlaveSize()
 {
     if (_isActive)
@@ -250,6 +315,14 @@ size_t Talis5Memory::getSlaveSize()
     return 0;
 }
 
+/**
+ * get registered slave list
+ * 
+ * @param[in]   buffer  pointer to array of uint8_t
+ * @param[in]   len length of the array
+ * 
+ * @return  size of registered slave
+*/
 size_t Talis5Memory::getSlave(uint8_t *buffer, size_t len)
 {
     if (_isActive)
@@ -268,6 +341,9 @@ size_t Talis5Memory::getSlave(uint8_t *buffer, size_t len)
     return 0;
 }
 
+/**
+ * print default parameter
+*/
 void Talis5Memory::printDefault()
 {
     Preferences preferences;
@@ -287,6 +363,9 @@ void Talis5Memory::printDefault()
     preferences.end();
 }
 
+/**
+ * print user parameter
+*/
 void Talis5Memory::printUser()
 {
     Preferences preferences;

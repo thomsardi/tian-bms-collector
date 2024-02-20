@@ -4,6 +4,13 @@ TianBMSJsonManager::TianBMSJsonManager()
 {
 }
 
+/**
+ * Build data from TianBMSData into json
+ * 
+ * @param[in]   tianBMSData TianBMSData object
+ * 
+ * @return      json formatted string
+*/
 String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
 {
     DynamicJsonDocument doc(3072);
@@ -171,6 +178,11 @@ String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
     
 }
 
+/**
+ * Build empty data json
+ * 
+ * @return      json formatted string
+*/
 String TianBMSJsonManager::buildEmptyData()
 {
     String output;

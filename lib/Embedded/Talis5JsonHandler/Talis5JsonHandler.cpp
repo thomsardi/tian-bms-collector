@@ -4,18 +4,26 @@ Talis5JsonHandler::Talis5JsonHandler(/* args */)
 {
 }
 
+/**
+ * Parse post json body for set slave api
+ * 
+ * @param[in]   json  jsonVariant with key:value pair json
+ * @param[in]   buff  vector of uint8_t to store the slave
+ * 
+ * @return  number of slave when success, 0 when failed or no input  
+*/
 size_t Talis5JsonHandler::parseSetSlaveJson(JsonVariant& json, std::vector<uint8_t>& buff)
 {
     size_t len = 0;
-    if (!json.containsKey("slave-list") || !json.containsKey("slave-set"))
+    if (!json.containsKey("slave_list") || !json.containsKey("slave_set"))
     {
         return 0;
     }
 
-    JsonVariant flag = json["slave-set"];
+    JsonVariant flag = json["slave_set"];
     if (flag.as<int>() > 0)
     {
-        JsonArray arr = json["slave-list"].as<JsonArray>();
+        JsonArray arr = json["slave_list"].as<JsonArray>();
         buff.reserve(arr.size());
         ESP_LOGI(_TAG, "arr size : %d\n", arr.size());
         for (size_t i = 0; i < arr.size(); i++)
@@ -41,6 +49,14 @@ String Talis5JsonHandler::buildJsonResponse(int code)
     return response;
 }
 
+/**
+ * Parse post json body for set network api
+ * 
+ * @param[in]   json  jsonVariant with key:value pair json
+ * @param[in]   wifiParameterData  WifiParameterData data structure
+ * 
+ * @return  true when success, false when failed  
+*/
 bool Talis5JsonHandler::parseSetNetwork(JsonVariant &json, WifiParameterData& wifiParameterData)
 {
     if( !json.containsKey("mode") || !json.containsKey("server") || !json.containsKey("ip") ||
@@ -68,6 +84,13 @@ bool Talis5JsonHandler::parseSetNetwork(JsonVariant &json, WifiParameterData& wi
     return 1;
 }
 
+/**
+ * Parse post json body for set modbus scan api
+ * 
+ * @param[in]   json  jsonVariant with key:value pair json
+ * 
+ * @return  true when success, false when failed  
+*/
 bool Talis5JsonHandler::parseModbusScan(JsonVariant &json)
 {
     if (!json.containsKey("scan"))
@@ -84,6 +107,14 @@ bool Talis5JsonHandler::parseModbusScan(JsonVariant &json)
     return 0;
 }
 
+/**
+ * Parse post json body for set modbus network api
+ * 
+ * @param[in]   json  jsonVariant with key:value pair json
+ * @param[in]   talis5ParameterData Talis5ParameterData data structure
+ * 
+ * @return  true when success, false when failed  
+*/
 bool Talis5JsonHandler::parseSetModbus(JsonVariant &json, Talis5ParameterData& talis5ParameterData)
 {
     if (!json.containsKey("ip") || !json.containsKey("port"))
@@ -98,6 +129,13 @@ bool Talis5JsonHandler::parseSetModbus(JsonVariant &json, Talis5ParameterData& t
     return 1;
 }
 
+/**
+ * Parse post json body for restart api
+ * 
+ * @param[in]   json  jsonVariant with key:value pair json
+ * 
+ * @return  true when success, false when failed  
+*/
 bool Talis5JsonHandler::parseRestart(JsonVariant& json)
 {
     if (!json.containsKey("restart"))
@@ -114,6 +152,13 @@ bool Talis5JsonHandler::parseRestart(JsonVariant& json)
     return 0;
 }
 
+/**
+ * Parse post json body for factory reset api
+ * 
+ * @param[in]   json  jsonVariant with key:value pair json
+ * 
+ * @return  true when success, false when failed  
+*/
 bool Talis5JsonHandler::parseFactoryReset(JsonVariant& json)
 {
     if (!json.containsKey("freset"))
