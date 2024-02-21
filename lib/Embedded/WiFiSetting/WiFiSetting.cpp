@@ -5,6 +5,11 @@ WiFiSetting::WiFiSetting()
     esp_log_level_set(_TAG, ESP_LOG_VERBOSE);
 }
 
+/**
+ * begin the connection
+ * 
+ * @param[in]   wifiParams WifiParams data structure
+*/
 void WiFiSetting::begin(WifiParams &wifiParams)
 {
     ESP_LOGI(_TAG, "WiFi setting begin");
@@ -161,51 +166,101 @@ void WiFiSetting::begin(WifiParams &wifiParams)
     }
 }
 
+/**
+ * get mode
+ * 
+ * @return   mode_type enum
+*/
 mode_type WiFiSetting::getMode()
 {
     return _modeType;
 }
 
+/**
+ * get server
+ * 
+ * @return   server_type enum
+*/
 server_type WiFiSetting::getStationServer()
 {
     return _stationServerType;
 }
 
+/**
+ * get ip
+ * 
+ * @return   ip
+*/
 String WiFiSetting::getIp()
 {
     return WiFi.localIP().toString();
 }
 
+/**
+ * get gateway ip
+ * 
+ * @return   gateway ip
+*/
 String WiFiSetting::getGateway()
 {
     return WiFi.gatewayIP().toString();
 }
 
+/**
+ * get subnet mask
+ * 
+ * @return   subnet mask
+*/
 String WiFiSetting::getSubnet()
 {
     return WiFi.subnetMask().toString();
 }
 
+/**
+ * get ssid
+ * 
+ * @return   ssid
+*/
 String WiFiSetting::getSsid()
 {
     return WiFi.SSID();
 }
 
+/**
+ * get ap server
+ * 
+ * @return   server_type enum
+*/
 server_type WiFiSetting::getApServer()
 {
     return _apServerType;
 }
 
+/**
+ * get ap ip
+ * 
+ * @return   ap ip
+*/
 String WiFiSetting::getApIp()
 {
     return WiFi.softAPIP().toString();
 }
 
+/**
+ * get ap subnet mask
+ * 
+ * @return   ap subnet mask
+*/
 String WiFiSetting::getApSubnet()
 {
     return WiFi.softAPSubnetMask().toString();
 }
 
+/**
+ * get ap ssid
+ * 
+ * @return   ap ssid
+*/
 String WiFiSetting::getApSsid()
 {
     return WiFi.softAPSSID();

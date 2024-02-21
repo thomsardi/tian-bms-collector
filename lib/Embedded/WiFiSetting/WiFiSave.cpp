@@ -4,6 +4,11 @@ WiFiSave::WiFiSave()
 {
 }
 
+/**
+ * begin the preference namespace, write the default setting and init flag
+ * 
+ * @param[in]   name    name for preference namespace
+*/
 void WiFiSave::begin(String name)
 {
     Preferences preferences;
@@ -27,6 +32,9 @@ void WiFiSave::begin(String name)
     writeShadow();
 }
 
+/**
+ * create default parameter
+*/
 void WiFiSave::createDefault()
 {
     String ssid = "esp32-" + WiFi.macAddress();
@@ -45,6 +53,9 @@ void WiFiSave::createDefault()
     preferences.end();
 }
 
+/**
+ * copy default parameter into user parameter
+*/
 void WiFiSave::copy()
 {
     Preferences preferences;
@@ -59,6 +70,11 @@ void WiFiSave::copy()
     preferences.end();
 }
 
+/**
+ * set wifi mode
+ * 
+ * @param[in]   mode  1 = AP, 2 = STATION, 3 = AP+STATION
+*/
 void WiFiSave::setMode(uint8_t mode)
 {
     if (_isActive)
@@ -68,6 +84,11 @@ void WiFiSave::setMode(uint8_t mode)
 
 }
 
+/**
+ * set wifi server
+ * 
+ * @param[in]   serverType  1 = STATIC, 2 = DHCP
+*/
 void WiFiSave::setServer(uint8_t serverType)
 {
     if (_isActive)
@@ -76,6 +97,11 @@ void WiFiSave::setServer(uint8_t serverType)
     }
 }
 
+/**
+ * set wifi static IP
+ * 
+ * @param[in]   ip 
+*/
 void WiFiSave::setIp(String ip)
 {
     if (_isActive)
@@ -84,6 +110,11 @@ void WiFiSave::setIp(String ip)
     }
 }
 
+/**
+ * set wifi gateway IP
+ * 
+ * @param[in]   ip 
+*/
 void WiFiSave::setGateway(String ip)
 {
     if (_isActive)
@@ -92,6 +123,11 @@ void WiFiSave::setGateway(String ip)
     }
 }
 
+/**
+ * set wifi subnet mask
+ * 
+ * @param[in]   ip 
+*/
 void WiFiSave::setSubnet(String ip)
 {
     if (_isActive)
@@ -100,6 +136,11 @@ void WiFiSave::setSubnet(String ip)
     }
 }
 
+/**
+ * set wifi ssid
+ * 
+ * @param[in]   ip 
+*/
 void WiFiSave::setSsid(String ssid)
 {
     if (_isActive)
@@ -108,6 +149,11 @@ void WiFiSave::setSsid(String ssid)
     }
 }
 
+/**
+ * set wifi password
+ * 
+ * @param[in]   ip 
+*/
 void WiFiSave::setPassword(String password)
 {
     if (_isActive)
@@ -116,6 +162,9 @@ void WiFiSave::setPassword(String password)
     }
 }
 
+/**
+ * write and save into preference memory
+*/
 void WiFiSave::save()
 {
     if (_isActive)
@@ -133,6 +182,9 @@ void WiFiSave::save()
     }
 }
 
+/**
+ * write shadow register from user parameter
+*/
 void WiFiSave::writeShadow()
 {
     if (_isActive)
@@ -150,11 +202,17 @@ void WiFiSave::writeShadow()
     }
 }
 
+/**
+ * cancel the recent input and revert back into last known parameter
+*/
 void WiFiSave::cancel()
 {
     writeShadow();
 }
 
+/**
+ * reset into default parameter
+*/
 void WiFiSave::reset()
 {
     if (_isActive)
@@ -168,6 +226,17 @@ void WiFiSave::reset()
     }
 }
 
+/**
+ * restart the object
+*/
+void WiFiSave::restart()
+{
+    begin(_name);
+}
+
+/**
+ * clear all preferences keys
+*/
 void WiFiSave::clear()
 {
     if (_isActive)
@@ -180,15 +249,12 @@ void WiFiSave::clear()
     }
 }
 
-void WiFiSave::restart()
-{
-    begin(_name);
-}
+
 
 /**
  * Get mode of the configuration
  * 
- * return   mode of the configuration, 1 for AP, 2 for Station, 3 for AP + Station
+ * @return   mode of the configuration, 1 for AP, 2 for Station, 3 for AP + Station
 */
 uint8_t WiFiSave::getMode()
 {
@@ -203,6 +269,11 @@ uint8_t WiFiSave::getMode()
     return 0;
 }
 
+/**
+ * Get server of the configuration
+ * 
+ * @return   server of the configuration, 1 for STATIC, 2 for DHCP
+*/
 uint8_t WiFiSave::getServer()
 {
     if (_isActive)
@@ -216,6 +287,11 @@ uint8_t WiFiSave::getServer()
     return 0;
 }
 
+/**
+ * Get ip of the configuration
+ * 
+ * @return   ip of the configuration
+*/
 String WiFiSave::getIp()
 {
     if (_isActive)
@@ -229,6 +305,11 @@ String WiFiSave::getIp()
     return "";
 }
 
+/**
+ * Get gateway ip of the configuration
+ * 
+ * @return   gateway ip of the configuration
+*/
 String WiFiSave::getGateway()
 {
     if (_isActive)
@@ -242,6 +323,11 @@ String WiFiSave::getGateway()
     return "";
 }
 
+/**
+ * Get subnet mask of the configuration
+ * 
+ * @return   subnet mask of the configuration
+*/
 String WiFiSave::getSubnet()
 {
     if (_isActive)
@@ -255,6 +341,11 @@ String WiFiSave::getSubnet()
     return "";
 }
 
+/**
+ * Get ssid configuration
+ * 
+ * @return   ssid of the configuration
+*/
 String WiFiSave::getSsid()
 {
     if (_isActive)
@@ -268,6 +359,11 @@ String WiFiSave::getSsid()
     return "";
 }
 
+/**
+ * Get password configuration
+ * 
+ * @return   password of the configuration
+*/
 String WiFiSave::getPassword()
 {
     if (_isActive)
@@ -281,6 +377,9 @@ String WiFiSave::getPassword()
     return "";
 }
 
+/**
+ * print default parameter
+*/
 void WiFiSave::printDefault()
 {
     Preferences preferences;
@@ -295,6 +394,9 @@ void WiFiSave::printDefault()
     preferences.end();
 }
 
+/**
+ * print user parameter
+*/
 void WiFiSave::printUser()
 {
     Preferences preferences;

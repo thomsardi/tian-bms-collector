@@ -312,7 +312,9 @@ void setup() {
     strcpy(wifiParams.params.subnet.data(), wifiSave.getSubnet().c_str());
 
     wifiParams.softApParams.server = server_type::STATIC;
-    strcpy(wifiParams.softApParams.ssid.data(), "ESP32-Tian-BMS");
+    String ssidName = "esp32-" + WiFi.macAddress();
+    ssidName.replace(":", "");
+    strcpy(wifiParams.softApParams.ssid.data(), ssidName.c_str());
     strcpy(wifiParams.softApParams.pass.data(), "esp32-default");
     strcpy(wifiParams.softApParams.ip.data(), "192.168.4.1");
     strcpy(wifiParams.softApParams.gateway.data(), "192.168.4.1");
@@ -525,6 +527,9 @@ void setup() {
             doc["mode"] = "AP";
             doc["device_ip"] = WiFi.softAPIP().toString(); 
             doc["ssid"] = WiFi.softAPSSID();
+            doc["gateway"] = "192.168.4.1";
+            doc["subnet"] = "255.255.255.0";
+            
         }
         else
         {
@@ -540,9 +545,10 @@ void setup() {
             default:
                 break;
             }
-            
-            doc["device_ip"] = WiFi.localIP().toString(); 
+            doc["device_ip"] = WiFi.localIP().toString();
             doc["ssid"] = WiFi.SSID();
+            doc["gateway"] = WiFi.gatewayIP().toString();
+            doc["subnet"] = WiFi.subnetMask().toString();
         }
         
         doc["mac_address"] = WiFi.macAddress();

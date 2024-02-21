@@ -204,7 +204,7 @@ void Talis5Memory::writeShadow()
 }
 
 /**
- * cancel the recent input and revert back the into last known parameter
+ * cancel the recent input and revert back into last known parameter
 */
 void Talis5Memory::cancel()
 {

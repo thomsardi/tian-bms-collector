@@ -40,6 +40,15 @@ function changeDeviceInfoContent(data) {
     spanElement.textContent = data['device_ip'];
   }
 
+  if('gateway' in data) {
+    const spanElement = document.getElementById('device-gateway');
+    spanElement.textContent = data['gateway'];
+  }
+  if('subnet' in data) {
+    const spanElement = document.getElementById('device-subnet');
+    spanElement.textContent = data['subnet'];
+  }
+
   if('mac_address' in data) {
     const spanElement = document.getElementById('mac-address');
     spanElement.textContent = data['mac_address'];
