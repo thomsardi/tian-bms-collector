@@ -3,24 +3,30 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" href="/assets/info.css">
-	<title>HOME</title>
+	<link rel="stylesheet" href="assets/info.css">
+	<title>INFO</title>
 </head>
 <body>
-	<div>
-		<nav>
-			<label class="logo">Talis5 Data Collector</label>
+	<header>
+        <nav>
+			<label class="logo">Rack Management System</label>
 			<ul>
 				<li><a href="/">Home</a></li>
 				<li><a href="/update">Update</a></li>
 			</ul>
 		</nav>
-	</div>
-	<div class="div-content-headline">
+	</header>
+	<main>
+		<div class="div-content-headline">
 		<div><label>Device Information</label></div>
 	</div>
 	<div class="column">
-		<div class="row" id="device-information">
+		<div class="row" >
+			<div class="column-content">
+				<div class="left-text">
+					<p>Current Config</p>
+				</div>
+			</div>
 			<div class="column-content">
 				<div class="left-text">
 					<p>Firmware Version</p>
@@ -55,22 +61,6 @@
 			</div>
 			<div class="column-content">
 				<div class="left-text">
-					<p>Device Gateway</p>
-				</div>
-				<div class="left-text">
-					<p><span id = "device-gateway"></span></p>
-				</div>
-			</div>
-			<div class="column-content">
-				<div class="left-text">
-					<p>Device Subnet</p>
-				</div>
-				<div class="left-text">
-					<p><span id = "device-subnet"></span></p>
-				</div>
-			</div>
-			<div class="column-content">
-				<div class="left-text">
 					<p>MAC Address</p>
 				</div>
 				<div class="left-text">
@@ -87,19 +77,223 @@
 			</div>										
 			<div class="column-content">
 				<div class="column-content flex">
+				</div>
+			</div>				
+		</div>
+		<form class="row" id="form-set-network" onsubmit="return onClickApply()">
+			<div class="column-content">
+				<div class="left-text">
+					<p>User Config</p>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p></p>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p>Mode</p>
+				</div>
+				<div>
+					<select id="mode" name="mode" title="mode" >
+					  <option value = 1>AP</option>
+					  <option value = 2>STATION</option>
+					  <option value = 3>APT STATION</option>
+					 </select>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p>Server Mode</p>
+				</div>
+				<div>
+					<select id="server" name="server" title="server" >
+					  <option value = 1>STATIC</option>
+					  <option value = 2>DHCP</option>
+					 </select>
+				</div>
+			</div>		
+			<div class="column-content">
+				<div class="left-text">
+					<p>SSID</p>
+				</div>
+				<div class="left-text">
+					<input type="text" id="ssid" name="ssid" minlength="8" maxlength="16" required>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p>Password</p>
+				</div>
+				<div class="left-text">
+					<input type="password" id="password" name="password" required>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p>Device IP</p>
+				</div>
+				<div>
+					<input type="number" id="device-ip1" name="device-ip1" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					<span>.</span>
+					<input type="number" id="device-ip2" name="device-ip2" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					<span>.</span>
+					<input type="number" id="device-ip3" name="device-ip3" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					<span>.</span>
+					<input type="number" id="device-ip4" name="device-ip4" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p>Gateway IP</p>
+				</div>
+				<div>
+					<input type="number" id="gateway-ip1" name="gateway-ip1" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					<span>.</span>
+					<input type="number" id="gateway-ip2" name="gateway-ip2" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					<span>.</span>
+					<input type="number" id="gateway-ip3" name="gateway-ip3" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					<span>.</span>
+					<input type="number" id="gateway-ip4" name="gateway-ip4" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p>Subnet IP</p>
+				</div>
+				<div>
+					<input type="number" id="subnet-ip1" name="subnet-ip1" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					<span>.</span>
+					<input type="number" id="subnet-ip2" name="subnet-ip2" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					<span>.</span>
+					<input type="number" id="subnet-ip3" name="subnet-ip3" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					<span>.</span>
+					<input type="number" id="subnet-ip4" name="subnet-ip4" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+				</div>
+			</div>													
+			<div class="column-content">
+				<div class="column-content flex">
+					<input type="submit" id="apply-button" class="button">
+				</div>
+			</div>				
+		</form>
+		<div>
+
+		</div>
+	</div>
+	<div class="column">
+		<div class="row">									
+			<div class="column-content">
+				<div class="left-text">
+					<p>MODBUS</p>
+				</div>
+			</div>				
+		</div>
+	</div>
+	<div class="column">
+		<div class="row">
+			<div class="column-content">
+				<div class="left-text">
+					<p> Current Config</p>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p>Modbus IP</p>
+				</div>
+				<div class="left-text">
+					<p><span id = "modbus-ip"></span></p>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p>Port</p>
+				</div>
+				<div class="left-text">
+					<p><span id = "port"></span></p>
+				</div>
+			</div>
+			<div class="column-content">
+				<div class="left-text">
+					<p>Slave</p>
+				</div>
+				<div class="left-text">
+					<p><span id = "slave-list"></span></p>
+				</div>
+			</div>									
+			<div class="column-content">
+				<div class="column-content flex">
+				</div>
+			</div>				
+		</div>
+		<div class="row">
+			<div class="column-content">
+				<div class="left-text">
+					<p>User Config</p>
+				</div>
+			</div>
+			<form id="form-set-modbus" onsubmit="return onClickApplyModbusConfig()">
+				<div class="column-content">
+					<div class="left-text">
+						<p>Modbus IP</p>
+					</div>
+					<div>
+						<input type="number" id="modbus-ip1" name="modbus-ip1" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+						<span>.</span>
+						<input type="number" id="modbus-ip2" name="modbus-ip2" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+						<span>.</span>
+						<input type="number" id="modbus-ip3" name="modbus-ip3" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+						<span>.</span>
+						<input type="number" id="modbus-ip4" name="modbus-ip4" min="0" style="width: 2.5rem;" pattern="\d+" onKeyPress="if(this.value.length==3) return false;" required>
+					</div>
+				</div>
+				<div class="column-content">
+					<div class="left-text">
+						<p>Port</p>
+					</div>
+					<div>
+						<input type="number" id="port-input" name="port-input" min="0" pattern="\d+" onKeyPress="if(this.value.length==5) return false;" required>
+					</div>
+				</div>
+				<div class="column-content">
+					<div class="column-content flex">
+						<input type="submit" id="apply-modbus-config-button" class="button">
+					</div>
+				</div>				
+			</form>
+			<form id="form-set-slave" onsubmit="return onClickApplyModbusSlave()">
+				<div class="column-content">
+					<div class="left-text">
+						<p>Slave List</p>
+					</div>
+					<div>
+						<input type="text" id="slave-list-input" name="slave-list-input" pattern="\b(?:\d+(?:-\d+)?(?:,|$))+\b" title="Input harus berupa format nomor dipisahkan oleh koma seperti 1,2,3,4 atau seperti 1-4" required>
+					</div>
+				</div>
+				<div class="column-content">
+					<div class="column-content flex">
+						<input type="submit" id="apply-modbus-slave-button" class="button">
+						<input type="button" id="apply-modbus-slave-button-1" class="button" onclick="onClickApplyModbusSlave()">
+					</div>
+				</div>										
+			</form>
+		</div>	
+		<div>
+		</div>
+		</div>
+	</div>
+	<div class="column">
+		<div class="row">									
+			<div class="column-content">
+				<div class="column-content flex">
 					<button id="reboot-button" onclick="onClickReboot()" class="button">Reboot</button>
 					<button id="factory-reset-button" onclick="onClickFactoryReset()" class="button">Factory Reset</button>
 				</div>
 			</div>				
 		</div>
-		<div>
-
-		</div>
-		<div>
-
-		</div>
 	</div>
-	
-	<script src="/assets/function_info_page.js"></script>
+	</main>
+	<script src="assets/function_info_page.js"></script>
 </body>
 </html>

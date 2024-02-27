@@ -271,12 +271,13 @@ void setup() {
     WiFi.onEvent(WiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
 
     wifiSave.begin("wifi_param");
+    // wifiSave.reset();
     // run only for first time
-    // wifiSave.setMode(mode_type::AP_STATION);
-    // wifiSave.setServer(server_type::DHCP);
+    // wifiSave.setMode(mode_type::STATION);
+    // wifiSave.setServer(server_type::STATIC);
     // wifiSave.setSsid("RnD_Sundaya");
     // wifiSave.setPassword("sundaya22");
-    // wifiSave.setIp("192.168.2.251");
+    // wifiSave.setIp("192.168.2.144");
     // wifiSave.setGateway("192.168.2.1");
     // wifiSave.setSubnet("255.255.255.0");
     // wifiSave.save();
@@ -378,7 +379,6 @@ void setup() {
         MB.setTarget(ip, talis5Memory.getModbusPort());
     }
     // MB.setTarget(IPAddress(192, 168, 2, 113), 502);
-
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
 		request->send(LittleFS, "/index.html", "text/html");
@@ -566,14 +566,14 @@ void setup() {
 
     server.on("/api/get-modbus-info", HTTP_GET, [](AsyncWebServerRequest *request)
     {
-        StaticJsonDocument<192> doc;
+        StaticJsonDocument<768> doc;
         String output;
         doc["modbus_ip"] = talis5Memory.getModbusTargetIp();
         doc["port"] = talis5Memory.getModbusPort();
         std::vector<uint8_t> buff;
         buff.reserve(255);
         buff.resize(talis5Memory.getSlaveSize());
-        talis5Memory.getSlave(buff.data(), talis5Memory.getSlaveSize());
+        size_t slaveNum = talis5Memory.getSlave(buff.data(), talis5Memory.getSlaveSize());
         JsonArray slave_list = doc.createNestedArray("slave_list");
         for (size_t i = 0; i < buff.size(); i++)
         {
@@ -642,6 +642,8 @@ void setup() {
 
     AsyncCallbackJsonWebHandler *setSlaveHandler = new AsyncCallbackJsonWebHandler("/api/set-slave", [](AsyncWebServerRequest *request, JsonVariant &json)
     {
+        ESP_LOGI(TAG, "----------------set slave----------------");
+        ESP_LOGI(TAG, "%s\n", json.as<String>().c_str());
         Talis5JsonHandler handler;
         int status = 400;
         std::vector<uint8_t> buff;
@@ -672,6 +674,7 @@ void setup() {
 
     AsyncCallbackJsonWebHandler *setModbus = new AsyncCallbackJsonWebHandler("/api/set-modbus", [](AsyncWebServerRequest *request, JsonVariant &json)
     {
+        ESP_LOGI(TAG, "----------------set modbus----------------");
         Talis5JsonHandler handler;
         Talis5ParameterData param;
         int status = 400;
@@ -704,6 +707,7 @@ void setup() {
 
     AsyncCallbackJsonWebHandler *setNetwork = new AsyncCallbackJsonWebHandler("/api/set-network", [](AsyncWebServerRequest *request, JsonVariant &json)
     {
+        ESP_LOGI(TAG, "----------------set network----------------");
         int status = 400;
         WifiParameterData wifiParameterData;
         Talis5JsonHandler parser;
@@ -749,6 +753,13 @@ void setup() {
     server.addHandler(setModbus);
     server.addHandler(restartHandler);
     server.addHandler(setFactoryReset);
+    server.onNotFound([](AsyncWebServerRequest *request) {
+        if (request->method() == HTTP_OPTIONS) {
+            request->send(200);
+        } else {
+            request->send(404);
+        }
+    });
     server.begin();
     globalIterator = reader.getTianBMSData().begin();
     lastRequest = millis();

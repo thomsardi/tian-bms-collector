@@ -85,5 +85,6 @@ document.getElementById("uploadForm").addEventListener("submit", function (e) {
     progressWrapper.classList.remove("visible-fadein");
     progressWrapper.classList.add("hidden-fadeout");
   };
+
   xhr.send(formData);
 });
