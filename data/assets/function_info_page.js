@@ -1,4 +1,4 @@
-// start set network
+// start set network //
 function onClickApply() {
   const elements = {
     mode: "mode",
@@ -10,6 +10,42 @@ function onClickApply() {
     subnet: "subnet-ip",
   };
   const result = {};
+  // Validation SSID
+  const ssidInput = document.getElementById(elements.ssid);
+  if (ssidInput.value.length < 8 || ssidInput.value.length > 16) {
+    alert("Invalid SSID. SSID must be between 8 and 16 characters.");
+    ssidInput.focus();
+    return false;
+  }
+
+  // Validation Password
+  const passwordInput = document.getElementById(elements.password);
+  if (passwordInput.value.length < 8) {
+    alert("Invalid Password. Password must be at least 8 characters long.");
+    passwordInput.focus();
+    return false;
+  }
+
+  // Validation IP Address, Gateway, and Subnet
+  const ipKeys = ["ip", "gateway", "subnet"];
+  for (const key of ipKeys) {
+    let value = "";
+    for (let i = 1; i <= 4; i++) {
+      const ipInput = document.getElementById(`${elements[key]}${i}`);
+      const ipValue = parseInt(ipInput.value);
+      if (isNaN(ipValue) || ipValue < 0 || ipValue > 255) {
+        alert(
+          "Invalid IP Address. Each part of the IP address must be a number between 0 and 255."
+        );
+        ipInput.focus();
+        return false;
+      }
+      value += ipValue + (i !== 4 ? "." : "");
+    }
+    result[key] = value;
+  }
+
+  // Data Collecting
   for (const key in elements) {
     if (Object.hasOwnProperty.call(elements, key)) {
       if (key === "mode" || key === "server") {
@@ -29,29 +65,64 @@ function onClickApply() {
     }
   }
   console.log(result);
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/api/set-network");
-  xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.onload = function () {
-    if (xhr.status === 200) {
+  fetch("/api/set-network", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(result),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then((data) => {
       alert("Success");
-      window.location.href = "/";
-    } else {
-      console.error("Error:", xhr.status);
-    }
-  };
-  xhr.send(JSON.stringify(result));
-  return true;
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      alert("Error occurred. Please check the console for details.222");
+    });
 }
-// end set network
+// end set network //
 
-// start set modbus
+// start set modbus //
 function onClickApplyModbusConfig() {
   const elements = {
     port: "port-input",
     ip: "modbus-ip",
   };
   const result = {};
+
+  // Validation IP Address
+  for (let i = 1; i <= 4; i++) {
+    const ipInput = document.getElementById(`${elements.ip}${i}`);
+    const ipValue = parseInt(ipInput.value);
+
+    if (isNaN(ipValue) || ipValue < 0 || ipValue > 255) {
+      alert(
+        "Invalid Modbus IP. Each part of the Modbus IP must be a number between 0 and 255."
+      );
+      ipInput.focus();
+      return false;
+    }
+  }
+
+  // Validation Port
+  const portInput = document.getElementById(elements.port);
+  const portValue = parseInt(portInput.value);
+
+  if (isNaN(portValue) || portValue < 0 || portValue > 65535) {
+    alert(
+      "Invalid Port. The port number must be a number between 0 and 65535."
+    );
+    portInput.focus();
+    return false;
+  }
+
+  // Data Collecting
   for (const key in elements) {
     if (Object.hasOwnProperty.call(elements, key)) {
       if (key === "port") {
@@ -69,27 +140,44 @@ function onClickApplyModbusConfig() {
     }
   }
   console.log(result);
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/api/set-modbus");
-  xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.onload = function () {
-    if (xhr.status === 200) {
+  fetch("/api/set-modbus", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(result),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then((data) => {
       alert("Success");
-      window.location.href = "/";
-    } else {
-      console.error("Error:", xhr.status);
-    }
-  };
-  xhr.send(JSON.stringify(result));
-  return true;
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      alert("Error occurred. Please check the console for details.222");
+    });
 }
-// end set modbus
+// end set modbus //
 
-// start set slave
+// start set slave //
 function onClickApplyModbusSlave() {
   const inputText = document.getElementById("slave-list-input").value.trim();
   let numbers = [];
 
+  //validation Slave List
+  const pattern = /\b(?:\d+(?:-\d+)?(?:,|$))+\b/;
+  if (!pattern.test(inputText)) {
+    alert(
+      "Invalid Slave List. Slave List should be a number format separated by commas like 1,2,3,4 or like 1-4"
+    );
+    return false; // Tidak mengirim formulir jika validasi gagal
+  }
+
+  // Data Collecting
   // Check if the input contains a range (e.g., "1-4")
   if (inputText.includes("-")) {
     const ranges = inputText.split(",");
@@ -124,26 +212,32 @@ function onClickApplyModbusSlave() {
     });
   }
   const result = {
-    slave_set: 1,
     slave_list: numbers,
   };
 
   console.log(result);
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", "/api/set-slave");
-  xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.onload = function () {
-    if (xhr.status === 200) {
+  fetch("/api/set-slave", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(result),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then((data) => {
       alert("Success");
-      window.location.href = "/";
-    } else {
-      console.error("Error:", xhr.status);
-    }
-  };
-  xhr.send(JSON.stringify(result));
-  return true;
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      alert("Error occurred. Please check the console for details.222");
+    });
 }
-// end set slave
+// end set slave //
 
 window.onload = function () {
   fetchData("/api/get-device-info", changeDeviceInfoContent);

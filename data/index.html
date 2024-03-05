@@ -80,7 +80,7 @@
 				</div>
 			</div>				
 		</div>
-		<form class="row" id="form-set-network" onsubmit="return onClickApply()">
+		<form class="row" id="form-set-network">
 			<div class="column-content">
 				<div class="left-text">
 					<p>User Config</p>
@@ -174,7 +174,7 @@
 			</div>													
 			<div class="column-content">
 				<div class="column-content flex">
-					<input type="submit" id="apply-button" class="button">
+					<input type="button" id="apply-button-1" class="button" onclick="onClickApply()" value="Submit"/>
 				</div>
 			</div>				
 		</form>
@@ -233,7 +233,7 @@
 					<p>User Config</p>
 				</div>
 			</div>
-			<form id="form-set-modbus" onsubmit="return onClickApplyModbusConfig()">
+			<form id="form-set-modbus" >
 				<div class="column-content">
 					<div class="left-text">
 						<p>Modbus IP</p>
@@ -258,23 +258,22 @@
 				</div>
 				<div class="column-content">
 					<div class="column-content flex">
-						<input type="submit" id="apply-modbus-config-button" class="button">
+						<input type="button" id="modbus-config-button" class="button" onclick="onClickApplyModbusConfig()"value="Submit"/>
 					</div>
 				</div>				
 			</form>
-			<form id="form-set-slave" onsubmit="return onClickApplyModbusSlave()">
+			<form id="form-set-slave" >
 				<div class="column-content">
 					<div class="left-text">
 						<p>Slave List</p>
 					</div>
 					<div>
-						<input type="text" id="slave-list-input" name="slave-list-input" pattern="\b(?:\d+(?:-\d+)?(?:,|$))+\b" title="Input harus berupa format nomor dipisahkan oleh koma seperti 1,2,3,4 atau seperti 1-4" required>
+						<input type="text" id="slave-list-input" name="slave-list-input" required>
 					</div>
 				</div>
 				<div class="column-content">
 					<div class="column-content flex">
-						<input type="submit" id="apply-modbus-slave-button" class="button">
-						<input type="button" id="apply-modbus-slave-button-1" class="button" onclick="onClickApplyModbusSlave()">
+						<input type="button" id="modbus-slave-button" class="button" onclick="onClickApplyModbusSlave()" value="Submit">
 					</div>
 				</div>										
 			</form>
