@@ -203,7 +203,7 @@ void handleData(ModbusMessage response, uint32_t token)
     uint8_t serverId = response.getServerID();
     ESP_LOGI(TAG, "Server ID : %d\n", serverId);
     
-    if (functionCode == READ_HOLD_REGISTER)
+    if (functionCode == READ_HOLD_REGISTER || functionCode == READ_INPUT_REGISTER)
     {
         uint8_t regCount;
         uint16_t buffer[64];
@@ -866,7 +866,7 @@ void loop() {
             {
                 if (millis() - lastRequest > 500)
                 {
-                    Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
+                    Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_INPUT_REGISTER, 4096, 34);
                     if (err!=SUCCESS) {
                         ModbusError e(err);
                         Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
@@ -891,7 +891,7 @@ void loop() {
         {
             ESP_LOGI(TAG, "Slave pointer : %d\n", slavePointer);
             ESP_LOGI(TAG, "Slave address : %d\n", slave.at(slavePointer));
-            Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_HOLD_REGISTER, 4096, 1);
+            Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_INPUT_REGISTER, 4096, 1);
             if (err!=SUCCESS) {
                 ModbusError e(err);
                 Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);

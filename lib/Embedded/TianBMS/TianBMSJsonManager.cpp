@@ -33,7 +33,7 @@ String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
 
     JsonObject remaining_capacity = doc.createNestedObject("remaining_capacity");
     remaining_capacity["unit"] = "Ah";
-    remaining_capacity["divider"] = 100;
+    remaining_capacity["divider"] = 1;
     remaining_capacity["value"] = tianBMSData.remainingCapacity;
 
     JsonObject average_cell_temperature = doc.createNestedObject("average_cell_temperature");
@@ -99,7 +99,7 @@ String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
 
     JsonObject full_charged_cap = doc.createNestedObject("full_charged_cap");
     full_charged_cap["unit"] = "Ah";
-    full_charged_cap["divider"] = 100;
+    full_charged_cap["divider"] = 1;
     full_charged_cap["value"] = tianBMSData.fullChargedCap;
 
     JsonObject cycle_count = doc.createNestedObject("cycle_count");
@@ -118,20 +118,20 @@ String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
     }
     
 
-    JsonObject cell_temperature = doc.createNestedObject("cell_temperature");
-    cell_temperature["unit"] = "Celcius";
-    cell_temperature["divider"] = 10;
+    // JsonObject cell_temperature = doc.createNestedObject("cell_temperature");
+    // cell_temperature["unit"] = "Celcius";
+    // cell_temperature["divider"] = 10;
 
-    JsonArray cell_temperature_value = cell_temperature.createNestedArray("value");
-    for (size_t i = 0; i < tianBMSData.cellTemperature.size(); i++)
-    {
-        cell_temperature_value.add(tianBMSData.cellTemperature[i]);
-    }
+    // JsonArray cell_temperature_value = cell_temperature.createNestedArray("value");
+    // for (size_t i = 0; i < tianBMSData.cellTemperature.size(); i++)
+    // {
+    //     cell_temperature_value.add(tianBMSData.cellTemperature[i]);
+    // }
 
-    JsonObject balance_temperature = doc.createNestedObject("balance_temperature");
-    balance_temperature["unit"] = "Celcius";
-    balance_temperature["divider"] = 10;
-    balance_temperature["value"] = tianBMSData.balanceTemperature;
+    // JsonObject balance_temperature = doc.createNestedObject("balance_temperature");
+    // balance_temperature["unit"] = "Celcius";
+    // balance_temperature["divider"] = 10;
+    // balance_temperature["value"] = tianBMSData.balanceTemperature;
 
     JsonObject max_cell_voltage = doc.createNestedObject("max_cell_voltage");
     max_cell_voltage["unit"] = "mV";
@@ -163,15 +163,15 @@ String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
     fet_temperature["divider"] = 10;
     fet_temperature["value"] = tianBMSData.fetTemp;
 
-    JsonObject remaining_charge_time = doc.createNestedObject("remaining_charge_time");
-    remaining_charge_time["unit"] = "Seconds";
-    remaining_charge_time["divider"] = 1;
-    remaining_charge_time["value"] = tianBMSData.remainChgTime;
+    // JsonObject remaining_charge_time = doc.createNestedObject("remaining_charge_time");
+    // remaining_charge_time["unit"] = "Seconds";
+    // remaining_charge_time["divider"] = 1;
+    // remaining_charge_time["value"] = tianBMSData.remainChgTime;
 
-    JsonObject remaining_discharge_time = doc.createNestedObject("remaining_discharge_time");
-    remaining_discharge_time["unit"] = "Seconds";
-    remaining_discharge_time["divider"] = 1;
-    remaining_discharge_time["value"] = tianBMSData.remainDsgTime;
+    // JsonObject remaining_discharge_time = doc.createNestedObject("remaining_discharge_time");
+    // remaining_discharge_time["unit"] = "Seconds";
+    // remaining_discharge_time["divider"] = 1;
+    // remaining_discharge_time["value"] = tianBMSData.remainDsgTime;
 
     serializeJson(doc, output);
     return output;

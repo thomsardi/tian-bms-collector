@@ -175,7 +175,7 @@ void TianBMS::setMaxErrorCount(uint8_t maxErrorCount)
 */
 bool TianBMS::updateData(uint8_t id, uint16_t* data, size_t dataSize)
 {    
-    if (dataSize >= 43)
+    if (dataSize >= 34)
     {
         _bmsData[id].packVoltage = *data++;
         _bmsData[id].packCurrent = *data++;
@@ -193,10 +193,10 @@ bool TianBMS::updateData(uint8_t id, uint16_t* data, size_t dataSize)
         {
             _bmsData[id].cellVoltage[i] = *data++;
         }
-        for (size_t i = 0; i < _bmsData[id].cellTemperature.size(); i++)
-        {
-            _bmsData[id].cellTemperature[i] = *data++;
-        }
+        // for (size_t i = 0; i < _bmsData[id].cellTemperature.size(); i++)
+        // {
+        //     _bmsData[id].cellTemperature[i] = *data++;
+        // }
         _bmsData[id].balanceTemperature = *data++;
         _bmsData[id].maxCellVoltage = *data++;
         _bmsData[id].minCellVoltage = *data++;
@@ -204,8 +204,8 @@ bool TianBMS::updateData(uint8_t id, uint16_t* data, size_t dataSize)
         _bmsData[id].maxCellTemp = *data++;
         _bmsData[id].minCellTemp = *data++;
         _bmsData[id].fetTemp = *data++;
-        _bmsData[id].remainChgTime = ((*data++) << 16) + *data++;
-        _bmsData[id].remainDsgTime = ((*data++) << 16) + *data++;
+        // _bmsData[id].remainChgTime = ((*data++) << 16) + *data++;
+        // _bmsData[id].remainDsgTime = ((*data++) << 16) + *data++;
         return true;
     }
     return false;
