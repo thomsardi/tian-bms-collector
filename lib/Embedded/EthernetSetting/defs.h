@@ -1,5 +1,5 @@
-#ifndef WIFI_DEF_H
-#define WIFI_DEF_H
+#ifndef ETHERNET_DEF_H
+#define ETHERNET_DEF_H
 
 #include <stdint.h>
 

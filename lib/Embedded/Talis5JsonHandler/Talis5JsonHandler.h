@@ -3,10 +3,9 @@
 
 #include <stdint.h>
 #include <ArduinoJson.h>
-#include <AsyncJson.h>
 #include <vector>
-#include <WiFiSave.h>
 #include <Talis5Memory.h>
+#include <EthernetSave.h>
 
 class Talis5JsonHandler
 {
@@ -16,12 +15,13 @@ private:
 public:
     Talis5JsonHandler(/* args */);
     String buildJsonResponse(int code);
-    size_t parseSetSlaveJson(JsonVariant& json, std::vector<uint8_t>& buff);
-    bool parseSetNetwork(JsonVariant& json, WifiParameterData& wifiParameterData);
-    bool parseModbusScan(JsonVariant& json);
-    bool parseSetModbus(JsonVariant& json, Talis5ParameterData& talis5ParameterData);
-    bool parseRestart(JsonVariant& json);
-    bool parseFactoryReset(JsonVariant& json);
+    size_t parseSetSlaveJson(String body, std::vector<uint8_t>& buff);
+    bool parseSetNetwork(String body, EthernetParameterData& ethernetParameterData);
+    bool parseModbusScan(String body);
+    bool parseSetModbus(String body, Talis5ParameterData& talis5ParameterData);
+    bool parseSetSerialModbus(String body, Talis5ParameterData& talis5ParameterData);
+    bool parseRestart(String body);
+    bool parseFactoryReset(String body);
     ~Talis5JsonHandler();
 };
 

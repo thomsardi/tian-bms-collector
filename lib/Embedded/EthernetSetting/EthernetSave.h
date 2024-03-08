@@ -1,36 +1,39 @@
-#ifndef WIFI_SAVE_H
-#define WIFI_SAVE_H
+#ifndef ETHERNET_SAVE_H
+#define ETHERNET_SAVE_H
 
 #include <Arduino.h>
 #include <Preferences.h>
-#include "WiFidef.h"
+#include "defs.h"
 #include "LittleFS.h"
-#include <WiFi.h>
 
-struct WifiParameterData {
-    uint8_t mode; // 1 = AP, 2 = STATION, 3 = AP+STATION
+struct EthernetParameterData {
     uint8_t server; // 1 = STATIC, 2 = DHCP
     String ip;
     String gateway;
     String subnet;
-    String ssid;
-    String password;
+    std::array<uint8_t, 6> mac;
 };
 
-class WiFiSave
+class EthernetSave
 {
 private:
     /* data */
-    const char* _TAG = "WiFi Save";
-    WifiParameterData _shadowParameter;
+    const char* _TAG = "Ethernet Save";
+    EthernetParameterData _shadowParameter;
     String _name;
     bool _isActive = false;
     void copy();
     void createDefault();
     void writeShadow();
+    void resetFlag();
+    bool _isServerSet = false;
+    bool _isIpSet = false;
+    bool _isGatewaySet = false;
+    bool _isSubnetSet = false;
+    bool _isMacSet = false;
 
 public:
-    WiFiSave();
+    EthernetSave();
     void printDefault();
     void printUser();
     
@@ -40,25 +43,21 @@ public:
     void reset();
     void restart();
     void clear();
-    void setMode(uint8_t mode);
 
     void setServer(uint8_t serverType);
     void setIp(String ip);
     void setGateway(String ip);
     void setSubnet(String ip);
-    void setSsid(String ssid);
-    void setPassword(String password);
-
-    uint8_t getMode();
+    void setMac(uint8_t* mac, size_t arrLen);
 
     uint8_t getServer();
     String getIp();
     String getGateway();
     String getSubnet();
-    String getSsid();
-    String getPassword();
+    size_t getMac(uint8_t* buff, size_t len);
+    String getMacString();
 
-    ~WiFiSave();
+    ~EthernetSave();
 };
 
 

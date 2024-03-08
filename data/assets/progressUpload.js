@@ -73,7 +73,7 @@ document.getElementById("uploadForm").addEventListener("submit", function (e) {
         window.location.href = "/update";
       }
       else {
-        alert("upload failed");
+        alert("upload failed : " + xhr.responseText);
       }
       
     } 

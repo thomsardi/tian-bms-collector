@@ -42,6 +42,10 @@ void Talis5Memory::createDefault()
     preferences.begin(_name.c_str());
     preferences.putString("d_mbus_ip", "192.168.4.1");
     preferences.putUShort("d_mbus_port", 502);
+    if (preferences.putInt("d_baud", 9600))
+    {
+        ESP_LOGI(_TAG, "success set baudrate");
+    }
     std::array<uint8_t, 16> slaveList;
     for (size_t i = 0; i < slaveList.size(); i++)
     {
@@ -62,6 +66,7 @@ void Talis5Memory::copy()
     preferences.begin(_name.c_str());
     preferences.putString("u_mbus_ip", preferences.getString("d_mbus_ip"));
     preferences.putUShort("u_mbus_port", preferences.getUShort("d_mbus_port"));
+    preferences.putInt("u_baud", preferences.getInt("d_baud"));
     size_t len = preferences.getBytesLength("d_slave_list");
     std::vector<uint8_t> arr;
     arr.reserve(len);
@@ -133,6 +138,20 @@ size_t Talis5Memory::setSlave(const uint8_t* value, size_t len)
 }
 
 /**
+ * set baudrate
+ * 
+ * @param[in]   baudrate  baudrate
+*/
+void Talis5Memory::setBaudRate(int baudRate)
+{
+    if (_isActive)
+    {
+        _shadowParameter.baudRate = baudRate;
+        _isBaudRateSet = true;
+    }
+}
+
+/**
  * write and save into preference memory
 */
 void Talis5Memory::save()
@@ -169,6 +188,11 @@ void Talis5Memory::save()
             }
             preferences.putBytes("u_slave_list", arr.data(), arr.size());
         }
+
+        if (_isBaudRateSet)
+        {
+            preferences.putInt("u_baud", _shadowParameter.baudRate);
+        }
         preferences.end();
         resetWriteFlag();
     }
@@ -184,6 +208,7 @@ void Talis5Memory::writeShadow()
         Preferences preferences;
         preferences.begin(_name.c_str());
         _shadowParameter.modbusTargetIp = preferences.getString("u_mbus_ip");
+        _shadowParameter.baudRate = preferences.getInt("u_baud");
         _shadowParameter.modbusPort = preferences.getUShort("u_mbus_port");
         size_t len = preferences.getBytesLength("u_slave_list");
         std::vector<uint8_t> arr;
@@ -248,6 +273,8 @@ void Talis5Memory::clear()
         preferences.clear();
         preferences.end();
         _isActive = false;
+        resetWriteFlag();
+        begin(_name);
     }
 }
 
@@ -259,6 +286,7 @@ void Talis5Memory::resetWriteFlag()
     _isIpSet = false;
     _isPortSet = false;
     _isSlaveSet = false;
+    _isBaudRateSet = false;
 }
 
 /**
@@ -277,6 +305,24 @@ String Talis5Memory::getModbusTargetIp()
         return value;
     }
     return "";
+}
+
+/**
+ * get baud rate
+ * 
+ * @return  baud rate of configuration
+*/
+int Talis5Memory::getBaudRate()
+{
+    if (_isActive)
+    {
+        Preferences preferences;
+        preferences.begin(_name.c_str());
+        int value = preferences.getInt("u_baud");
+        preferences.end();
+        return value;
+    }
+    return 0;
 }
 
 /**
@@ -350,6 +396,7 @@ void Talis5Memory::printDefault()
     preferences.begin(_name.c_str());
     ESP_LOGI(_TAG, "d_mbus_ip : %s\n", preferences.getString("d_mbus_ip").c_str());
     ESP_LOGI(_TAG, "d_mbus_port : %d\n", preferences.getUShort("d_mbus_port"));
+    ESP_LOGI(_TAG, "d_baud : %d\n", preferences.getInt("d_baud"));
 
     std::vector<uint8_t> arr;
     size_t len = preferences.getBytesLength("d_slave_list");
@@ -372,6 +419,7 @@ void Talis5Memory::printUser()
     preferences.begin(_name.c_str());
     ESP_LOGI(_TAG, "u_mbus_ip : %s\n", preferences.getString("u_mbus_ip").c_str());
     ESP_LOGI(_TAG, "u_mbus_port : %d\n", preferences.getUShort("u_mbus_port"));
+    ESP_LOGI(_TAG, "u_baud : %d\n", preferences.getInt("u_baud"));
 
     std::vector<uint8_t> arr;
     size_t len = preferences.getBytesLength("u_slave_list");
