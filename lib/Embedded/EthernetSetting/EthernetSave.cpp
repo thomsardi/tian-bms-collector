@@ -38,8 +38,8 @@ void EthernetSave::begin(String name)
 */
 void EthernetSave::createDefault()
 {
-    std::array<uint8_t, 6> mac = {0x02, 0x34, 0x56, 0x78, 0x9A, 0xBC};
-    // { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x01 }
+    // std::array<uint8_t, 6> mac = {0x02, 0x34, 0x56, 0x78, 0x9A, 0xBC};
+    std::array<uint8_t, 6> mac = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x01 };
     Preferences preferences;
     preferences.begin(_name.c_str());
     preferences.putUChar("d_svr", 2); // set to DHCP
@@ -381,7 +381,7 @@ void EthernetSave::printDefault()
     ESP_LOGI(_TAG, "d_subnet : %s\n", preferences.getString("d_subnet").c_str());
     std::array<uint8_t, 6> mac;
     preferences.getBytes("d_mac", mac.data(), mac.size());
-    std::array<char, 20> buff;
+    std::array<char, 32> buff;
     snprintf(buff.data(), buff.size(), "%02X::%02X::%02X::%02X::%02X::%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     ESP_LOGI(_TAG, "d_mac : %s\n", buff.data());
     preferences.end();
@@ -400,7 +400,7 @@ void EthernetSave::printUser()
     ESP_LOGI(_TAG, "u_subnet : %s\n", preferences.getString("u_subnet").c_str());
     std::array<uint8_t, 6> mac;
     preferences.getBytes("u_mac", mac.data(), mac.size());
-    std::array<char, 20> buff;
+    std::array<char, 32> buff;
     snprintf(buff.data(), buff.size(), "%02X::%02X::%02X::%02X::%02X::%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     ESP_LOGI(_TAG, "u_mac : %s\n", buff.data());
     preferences.end();

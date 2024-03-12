@@ -53,7 +53,8 @@ EthernetSave ethernetSave;
 // WiFiSetting wifiSetting;
 
 std::vector<uint8_t> slave;
-std::map<int, TianBMSData>::iterator globalIterator;
+std::vector<uint8_t>::iterator globalIterator;
+// std::map<int, TianBMSData>::iterator globalIterator;
 
 unsigned long lastReconnectMillis;
 unsigned long lastRequest;
@@ -68,12 +69,14 @@ uint8_t slavePointer = 0;
 bool isFlashFailed = false;
 
 bool isRestart = false;
+bool isUpload = false;
 bool isCleanup = false;
 bool isSlaveChanged = false;
 bool isScan = false;
 uint8_t isScanFinished = false;
 uint8_t emptyCount = 0;
 uint8_t failCount = 0;
+uint8_t cleanUpCheckCount = 0;
 
 // put function declarations here:
 
@@ -248,6 +251,9 @@ bool handleFileRead(String path)
 void handleFirmwareUpload()
 {
   // ESP_LOGI(TAG, "Handle firmware upload");
+  isUpload = true;
+  MB.end(); // must be used to disable modbus task, without this the ota will be failed
+  MB.clearQueue(); // clear the request queue
   ethernetHTTPUpload& upload = server.upload();
   FlashZ &flashZ = FlashZ::getInstance();
   static size_t bytesWritten = 0;
@@ -330,6 +336,9 @@ void handleFirmwareUpload()
 */
 void handleCompressedFirmwareUpload()
 {
+  isUpload = true;
+  MB.end(); // must be used to disable modbus task, without this the ota will be failed
+  MB.clearQueue(); // clear the request queue
   ethernetHTTPUpload& upload = server.upload();
   FlashZ &fz = FlashZ::getInstance();
   static int bytesWritten = 0;
@@ -351,8 +360,7 @@ void handleCompressedFirmwareUpload()
   }
   else if (upload.status == UPLOAD_FILE_END)
   {
-    uint8_t dummyData = 0;
-    bytesWritten += fz.writez(&dummyData, 0, true); // to signal end of data, must be used!!
+    bytesWritten += fz.writez(upload.buf, upload.currentSize, true); // to signal end of data, must be used!!
     ESP_LOGI(TAG, "uploaded file size : %d\n", upload.totalSize);
     ESP_LOGI(TAG, "flash written bytes / file size : %d / %d", bytesWritten, upload.totalSize);
     bytesWritten = 0;
@@ -366,6 +374,9 @@ void handleCompressedFirmwareUpload()
 */
 void handleFilesystemUpload()
 {
+  isUpload = true; // flag to disable loop routine and modbus
+  MB.end(); // must be used to disable modbus task, without this the ota will be failed
+  MB.clearQueue(); // clear the request queue
   ethernetHTTPUpload& upload = server.upload();
   FlashZ &flashZ = FlashZ::getInstance();
   static size_t bytesWritten = 0;
@@ -400,6 +411,9 @@ void handleFilesystemUpload()
 */
 void handleCompressedFilesystemUpload()
 {
+  isUpload = true;
+  MB.end(); // must be used to disable modbus task, without this the ota will be failed
+  MB.clearQueue(); // clear the request queue
   ethernetHTTPUpload& upload = server.upload();
   FlashZ &fz = FlashZ::getInstance();
   static int bytesWritten = 0;
@@ -421,8 +435,7 @@ void handleCompressedFilesystemUpload()
   }
   else if (upload.status == UPLOAD_FILE_END)
   {
-    uint8_t dummyData = 0;
-    bytesWritten += fz.writez(&dummyData, 0, true); // to signal end of data, must be used!!
+    bytesWritten += fz.writez(upload.buf, upload.currentSize, true); // to signal end of data, must be used!!
     ESP_LOGI(TAG, "uploaded file size : %d\n", upload.totalSize);
     ESP_LOGI(TAG, "flash written bytes / file size : %d / %d", bytesWritten, upload.totalSize);
     bytesWritten = 0;
@@ -551,6 +564,15 @@ void setupEthernet()
   }
   ESP_LOGI(TAG, "Connected to IP : %s\n", Ethernet.localIP().toString());
   ESP_LOGI(TAG, "MAC Address %02X::%02X::%02X::%02X::%02X::%02X", macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
+  digitalWrite(internalLed, HIGH);
+}
+
+void setupModbus()
+{
+  MB.onDataHandler(&handleData);
+  MB.onErrorHandler(&handleError);
+  MB.setTimeout(1000);
+  MB.begin(Serial2);
 }
 
 /**
@@ -618,9 +640,10 @@ void setup() {
   // while(1);
   // talis5Memory.setModbusTargetIp("192.168.2.113");
   // talis5Memory.setModbusPort(502);
-  // uint8_t list[7] = {1,2,5,7,10,12,32};
+  // uint8_t list[7] = {1,2,3,4,5,6};
   // talis5Memory.setSlave(list, 7);
   // talis5Memory.save();
+  // while(1);
 
   ESP_LOGI(TAG, "Number of slave : %d\n", talis5Memory.getSlaveSize());
 
@@ -640,13 +663,20 @@ void setup() {
   RTUutils::prepareHardwareSerial(Serial2);
   Serial2.begin(9600);
 
-  MB.onDataHandler(&handleData);
-  MB.onErrorHandler(&handleError);
-  MB.setTimeout(1000);
-  // MB.begin(Serial2);
+  setupModbus();
 
   FlashZ &fz = FlashZ::getInstance();
-  fz.onProgress(flashOnProgress);
+  // fz.onProgress(flashOnProgress);
+
+  ethernetFunctionRequestHandler *testHandler = new ethernetFunctionRequestHandler([](){
+    ESP_LOGI(TAG, "========== this is handle ==========");
+    server.send(200, "application/json", "handle response");
+  }, [](){
+    ESP_LOGI(TAG, "========= this is upload handler =========");
+    // server.send(200, "application/json", "upload response");
+  }, "/api/test", HTTP_POST);
+
+  // server.addHandler(testHandler);
 
   server.on("/", HTTP_GET, [](){
       if (!handleFileRead("/index.html"))
@@ -822,8 +852,9 @@ void setup() {
     else
     {
       server.send(200, "text/plain", "File has been uploaded successfully.");
-      isRestart = true;
     }
+    isRestart = true;
+    isUpload = false;
   }, handleFirmwareUpload);
 
   server.on("/api/update-compressed-firmware", HTTP_POST, [](){
@@ -839,8 +870,9 @@ void setup() {
     else
     {
       server.send(200, "text/plain", "File has been uploaded successfully.");
-      isRestart = true;
     }
+    isRestart = true;
+    isUpload = false;
   }, handleCompressedFirmwareUpload);
 
   server.on("/api/update-filesystem", HTTP_POST, [](){
@@ -856,8 +888,9 @@ void setup() {
     else
     {
       server.send(200, "text/plain", "File has been uploaded successfully.");
-      isRestart = true;
     }
+    isRestart = true;
+    isUpload = false;
   }, handleFilesystemUpload);
 
   server.on("/api/update-compressed-filesystem", HTTP_POST, [](){
@@ -873,8 +906,9 @@ void setup() {
     else
     {
       server.send(200, "text/plain", "File has been uploaded successfully.");
-      isRestart = true;
     }
+    isRestart = true;
+    isUpload = false;    
   }, handleCompressedFilesystemUpload);
 
   server.on("/api/set-slave", HTTP_POST, [](){
@@ -888,9 +922,9 @@ void setup() {
       {
           status = 200;
           talis5Memory.setSlave(buff.data(), len);
-          talis5Memory.printUser();
-          talis5Memory.cancel();
-          // talis5Memory.save();
+          // talis5Memory.printUser();
+          // talis5Memory.cancel();
+          talis5Memory.save();
           isSlaveChanged = true;
           lastQueueCheck = millis();
       }
@@ -940,9 +974,9 @@ void setup() {
       {
           status = 200;
           talis5Memory.setBaudRate(param.baudRate);
-          talis5Memory.printUser();
-          talis5Memory.cancel();
-          // talis5Memory.save();
+          // talis5Memory.printUser();
+          // talis5Memory.cancel();
+          talis5Memory.save();
       }
       server.send(status, "application/json", handler.buildJsonResponse(status));
   });
@@ -952,8 +986,8 @@ void setup() {
       int status = 400;
       if (handler.parseRestart(server.arg("plain")))
       {
-          status = 200;
-          isRestart = true;
+        status = 200;
+        isRestart = true;
       }
       server.send(status, "application/json", handler.buildJsonResponse(status));
   });
@@ -975,9 +1009,9 @@ void setup() {
           ethernetSave.setGateway(ethernetParameterData.gateway);
           ethernetSave.setSubnet(ethernetParameterData.subnet);
           ethernetSave.setMac(ethernetParameterData.mac.data(), ethernetParameterData.mac.size());
-          ethernetSave.printUser();
-          ethernetSave.cancel();
-          // ethernetSave.save();
+          // ethernetSave.printUser();
+          // ethernetSave.cancel();
+          ethernetSave.save();
       }
       server.send(status, "application/json", parser.buildJsonResponse(status));
   });
@@ -987,17 +1021,18 @@ void setup() {
       int status = 400;
       if (handler.parseFactoryReset(server.arg("plain")))
       {
-          status = 200;
-          talis5Memory.reset();
-          ethernetSave.reset();
-          isRestart = true;
+        status = 200;
+        talis5Memory.reset();
+        ethernetSave.reset();
+        isRestart = true;
       }
       server.send(status, "application/json", handler.buildJsonResponse(status));
   });
 
   // server.onNotFound(handleNotFound);
   server.begin();
-  globalIterator = reader.getTianBMSData().begin();
+  // globalIterator = reader.getTianBMSData().begin();
+  globalIterator = slave.begin();
   lastRequest = millis();
   lastCleanup = millis();
 }
@@ -1006,157 +1041,151 @@ unsigned long lastCheck = 0;
 
 void loop() {
   // put your main code here, to run repeatedly:
-    
-    if (millis() - lastCheck > 1000)
+
+  // if (millis() - lastCheck > 1000)
+  // {
+  //   ESP_LOGI(TAG, "ULULULU");
+  //   lastCheck = millis();
+  // }
+  
+  if (!isUpload) // flag to indicate if an upload task is happening. Without this, the modbus task will interfere ota and causing corrupted data
+  {
+    if (isScanFinished)
     {
-      ESP_LOGI(TAG, "ULULULU");
-      lastCheck = millis();
+      if (millis() - lastCleanup > 1000)
+      {
+        ESP_LOGI(TAG, "check clean up");
+        isCleanup = true;
+        if (MB.pendingRequests() == 0) // check if there is still pending request on queue, wait until it is empty
+        {
+          if (xSemaphoreTake(read_mutex, portMAX_DELAY))
+          {
+            if (xSemaphoreTake(write_mutex, portMAX_DELAY))
+            {
+              ESP_LOGI(TAG, "clean up");
+              reader.cleanUp();
+              isCleanup = false;
+              lastCleanup = millis();
+              xSemaphoreGive(write_mutex);
+            }
+            xSemaphoreGive(read_mutex);
+          }
+          // isScanFinished = false;
+        }
+        lastCleanup = millis();
+      }
     }
-    
-    /**
-     * TO DO : This block is used to clean up obsolete data to free up space, but still causing crash
-    */
-    // if (isScanFinished)
-    // {
-    //     if (millis() - lastCleanup > 1000)
-    //     {
-    //         isCleanup = true;
-    //         if (MB.pendingRequests() == 0) // check if there is still pending request on queue, wait until it is empty
-    //         {
-    //             reader.cleanUp(); // perform cleanup
-    //             ESP_LOGI(TAG, "clean up");
-    //             isCleanup = false;
-    //             std::map<int, TianBMSData>::iterator it = reader.getTianBMSData().begin();
-    //             if (it == reader.getTianBMSData().end()) // check if data is empty
-    //             {
-    //                 emptyCount++;
-    //                 if (emptyCount > 3) // if it is empty during > 3 times check, then perform address scan again
-    //                 {
-    //                     isScanFinished = false;
-    //                     emptyCount = 0;
-    //                 }
-    //             }
-    //             lastCleanup = millis();
-    //         }
-    //     }
-    // }
-    // else
-    // {
-    //     lastCleanup = millis();
-    // }
+    else
+    {
+      lastCleanup = millis();
+    }
 
-    // if(isSlaveChanged || isScan)
-    // {
-    //     if (MB.pendingRequests() == 0)
-    //     {
-    //         if (millis() - lastQueueCheck > 3000)
-    //         {
-    //             if (xSemaphoreTake(read_mutex, portMAX_DELAY))
-    //             {
-    //                 if (xSemaphoreTake(write_mutex, portMAX_DELAY))
-    //                 {
-    //                     // check if the signal is coming from slave changed flag, the new setting need to be written, if not it is coming from rescan flag
-    //                     if (isSlaveChanged) 
-    //                     {
-    //                         ESP_LOGI(TAG, "SAVE PARAMETER AND CLEAR");
-    //                         talis5Memory.save();
-    //                         slave.resize(talis5Memory.getSlaveSize());
-    //                         talis5Memory.getSlave(slave.data(), talis5Memory.getSlaveSize());
-    //                     }
-    //                     else
-    //                     {
-    //                         ESP_LOGI(TAG, "RESCAN");
-    //                     }
-    //                     isScanFinished = false;
-    //                     isSlaveChanged = false;
-    //                     isScan = false;
-    //                     reader.clearData();
-    //                     xSemaphoreGive(write_mutex);
-    //                 }
-    //                 xSemaphoreGive(read_mutex);
-    //             }
-    //             lastQueueCheck = millis();
-    //         }
-    //     }
-    //     else
-    //     {
-    //         lastQueueCheck = millis();
-    //     }
-    // }
+    if(isSlaveChanged || isScan)
+    {
+      if (MB.pendingRequests() == 0)
+      {
+        if (millis() - lastQueueCheck > 3000)
+        {
+          if (xSemaphoreTake(read_mutex, portMAX_DELAY))
+          {
+            if (xSemaphoreTake(write_mutex, portMAX_DELAY))
+            {
+              // check if the signal is coming from slave changed flag, the new setting need to be written, if not it is coming from rescan flag
+              if (isSlaveChanged) 
+              {
+                ESP_LOGI(TAG, "SAVE PARAMETER AND CLEAR");
+                talis5Memory.save();
+                slave.resize(talis5Memory.getSlaveSize());
+                talis5Memory.getSlave(slave.data(), talis5Memory.getSlaveSize());
+              }
+              else
+              {
+                ESP_LOGI(TAG, "RESCAN");
+              }
+              isScanFinished = false;
+              isSlaveChanged = false;
+              isScan = false;
+              reader.clearData();
+              xSemaphoreGive(write_mutex);
+            }
+            xSemaphoreGive(read_mutex);
+          }
+          lastQueueCheck = millis();
+        }
+      }
+      else
+      {
+        lastQueueCheck = millis();
+      }
+    }
 
-  //   if (isScanFinished)
-  //   {
-  //       /**
-  //        * This block will push the request to queue based on detected slave
-  //       */
-  //       // if (!isCleanup) // this flag is to detect if it's time to do cleanup, then pause the .addRequest
-  //       // { 
-  //       if (!isSlaveChanged && !isScan) // if it is not scan or not slave changed, do normal polling
-  //       {
-  //           if (globalIterator != reader.getTianBMSData().end())
-  //           {
-  //               if (millis() - lastRequest > 500)
-  //               {
-  //                   // 43 request is for all data
-  //                   // Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
-  //                   // 34 request for old data
-  //                   Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_INPUT_REGISTER, 4096, 34);
-  //                   if (err!=SUCCESS) {
-  //                       ModbusError e(err);
-  //                       Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
-  //                   }
-  //                   lastRequest = millis();
-  //                   globalIterator++; // increment the iterator to the next element
-  //               }
-  //           }
-  //           else
-  //           {
-  //               globalIterator = reader.getTianBMSData().begin(); // get the iterator of the first element of data
-  //           }
-  //       }
-  //       // }
-  //   }
-  //   else
-  //   {
-  //       /**
-  //        * This block is to do address(slave) scan, start from slave 1 to 16
-  //       */
-  //       if (millis() - lastRequest > 500)
-  //       {
-  //           ESP_LOGI(TAG, "Slave pointer : %d\n", slavePointer);
-  //           ESP_LOGI(TAG, "Slave address : %d\n", slave.at(slavePointer));
-  //           // Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_HOLD_REGISTER, 4096, 1);
-  //           Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_INPUT_REGISTER, 4096, 1);
-  //           if (err!=SUCCESS) {
-  //               ModbusError e(err);
-  //               Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
-  //           }
-  //           slavePointer++;
-  //           if (slavePointer >= slave.size())
-  //           {
-  //               slavePointer = 0;
-  //               isScanFinished = 1;
-  //               globalIterator = reader.getTianBMSData().begin();
-  //           }
-  //           lastRequest = millis();
-  //       }
-  //   }
-    
-    
-    
+    if (isScanFinished)
+    {
+      /**
+       * This block will push the request to queue based on detected slave
+      */
+      if (!isCleanup) // this flag is to detect if it's time to do cleanup, then pause the .addRequest
+      { 
+        if (!isSlaveChanged && !isScan) // if it is not scan or not slave changed, do normal polling
+        {
+          // if (globalIterator != reader.getTianBMSData().end())
+          if (globalIterator != slave.end())
+          {
+            if (millis() - lastRequest > 500)
+            {
+              // 43 request is for all data
+              // Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
+              // 34 request for old data
+              // Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_INPUT_REGISTER, 4096, 34);
+              Error err = MB.addRequest(reader.getToken((*globalIterator), TianBMSUtils::REQUEST_DATA), (*globalIterator), READ_INPUT_REGISTER, 4096, 34);
+              if (err!=SUCCESS) {
+                  ModbusError e(err);
+                  Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+              }
+              lastRequest = millis();
+              globalIterator++; // increment the iterator to the next element
+            }
+          }
+          else
+          {
+            // globalIterator = reader.getTianBMSData().begin(); // get the iterator of the first element of data
+            globalIterator = slave.begin(); // get the iterator of the first element of data
+          }
+        }
+      }
+    }
+    else
+    {
+      /**
+       * This block is to do address(slave) scan, start from slave 1 to 16
+      */
+      if (millis() - lastRequest > 500)
+      {
+        ESP_LOGI(TAG, "Slave pointer : %d\n", slavePointer);
+        ESP_LOGI(TAG, "Slave address : %d\n", slave.at(slavePointer));
+        // Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_HOLD_REGISTER, 4096, 1);
+        Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_INPUT_REGISTER, 4096, 1);
+        if (err!=SUCCESS) {
+          ModbusError e(err);
+          Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+        }
+        slavePointer++;
+        if (slavePointer >= slave.size())
+        {
+          slavePointer = 0;
+          isScanFinished = 1;
+          // globalIterator = reader.getTianBMSData().begin();
+          globalIterator = slave.begin();
+        }
+        lastRequest = millis();
+      }
+    }
+  }
 
-  //   // ESP_LOGI(TAG, "PCB Code : %s\n", tianBMS.getPcbBarcode().c_str());
-	// // if (factoryReset)
-	// // {
-	// // 	talisMemory.reset();
-	// // 	ESP_LOGI(TAG, "Factory Reset");
-	// // 	rmsRestartCommand.restart = true;
-	// // 	factoryReset = false;
-	// // }
-
-	if (isRestart)
+	if (isRestart) // flag to issue a restart
 	{
-		isRestart = false;
+		ESP_LOGI(TAG, "restart esp");
+    isRestart = false;
 		digitalWrite(internalLed, LOW);
 		delay(100);
 		ESP.restart();

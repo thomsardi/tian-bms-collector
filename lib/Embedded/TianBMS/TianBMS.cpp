@@ -147,12 +147,14 @@ void TianBMS::cleanUp()
     {
         if ((*it).second.errorCount > _maxErrorCount)
         {
+            ESP_LOGI(_TAG, "=========== error count reached on id : %d\n ==============", (*it).first);
             obsoleteDataIndex.push_back((*it).first);
         }
     }
 
     for (size_t i = 0; i < obsoleteDataIndex.size(); i++)
     {
+        ESP_LOGI(_TAG, "============== erase data on index : %d\n ================", obsoleteDataIndex.at(i));
         _bmsData.erase(obsoleteDataIndex.at(i));
     }
 }
