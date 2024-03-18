@@ -18,6 +18,7 @@ bool TianBMS::update(uint8_t id, uint32_t token, uint16_t* data, size_t dataSize
 {
     TokenInfo tokenInfo = parseToken(token);
     uint8_t requestType = tokenInfo.requestType;
+    uint16_t dummyData[] = {13873, 12600, 12336, 12340, 12544};
     switch (requestType)
     {
     case TianBMSUtils::RequestType::REQUEST_DATA :
@@ -31,59 +32,35 @@ bool TianBMS::update(uint8_t id, uint32_t token, uint16_t* data, size_t dataSize
         break;
     case TianBMSUtils::RequestType::REQUEST_PCB_CODE :
         _bmsData[id].id = id;
-        if (_endianess == TianBMSUtils::Endianess::ENDIAN_LITTLE)
+        ESP_LOGI(_TAG, "update pcb barcode");
+        ESP_LOGI(_TAG, "register count : %d\n", dataSize);
+        if (updatePcbBarcode(id, data, dataSize))
         {
-            if (updatePcbBarcode(id, data, dataSize, true))
-            {
-                _bmsData[id].msgCount++;
-                return true;
-            }
-        }
-        else
-        {
-            if (updatePcbBarcode(id, data, dataSize))
-            {
-                _bmsData[id].msgCount++;
-                return true;
-            }
+            ESP_LOGI(_TAG, "success convert");
+            _bmsData[id].msgCount++;
+            return true;
         }
         break;
     case TianBMSUtils::RequestType::REQUEST_SN1_CODE :
         _bmsData[id].id = id;
-        if (_endianess == TianBMSUtils::Endianess::ENDIAN_LITTLE)
+        ESP_LOGI(_TAG, "update sn1 code");
+        ESP_LOGI(_TAG, "register count : %d\n", dataSize);
+        if (updateSnCode1(id, data, dataSize))
         {
-            if (updateSnCode1(id, data, dataSize, true))
-            {
-                _bmsData[id].msgCount++;
-                return true;
-            }
-        }
-        else
-        {
-            if (updateSnCode1(id, data, dataSize))
-            {
-                _bmsData[id].msgCount++;
-                return true;
-            }
+            ESP_LOGI(_TAG, "success convert");
+            _bmsData[id].msgCount++;
+            return true;
         }
         
         break;
     case TianBMSUtils::RequestType::REQUEST_SN2_CODE :
-        if (_endianess == TianBMSUtils::Endianess::ENDIAN_LITTLE)
+        ESP_LOGI(_TAG, "update sn2 code");
+        ESP_LOGI(_TAG, "register count : %d\n", dataSize);
+        if (updateSnCode2(id, data, dataSize))
         {
-            if (updateSnCode2(id, data, dataSize, true))
-            {
-                _bmsData[id].msgCount++;
-                return true;
-            }
-        }
-        else
-        {
-            if (updateSnCode2(id, data, dataSize))
-            {
-                _bmsData[id].msgCount++;
-                return true;
-            }
+            ESP_LOGI(_TAG, "success convert");
+            _bmsData[id].msgCount++;
+            return true;
         }
         break;
     case TianBMSUtils::RequestType::REQUEST_SCAN :
@@ -178,7 +155,7 @@ void TianBMS::setMaxErrorCount(uint8_t maxErrorCount)
 bool TianBMS::updateData(uint8_t id, uint16_t* data, size_t dataSize)
 {    
     // if (dataSize >= 43)
-    if (dataSize >= 34)
+    if (dataSize >= 41)
     {
         _bmsData[id].packVoltage = *data++;
         _bmsData[id].packCurrent = *data++;
@@ -196,19 +173,19 @@ bool TianBMS::updateData(uint8_t id, uint16_t* data, size_t dataSize)
         {
             _bmsData[id].cellVoltage[i] = *data++;
         }
-        // for (size_t i = 0; i < _bmsData[id].cellTemperature.size(); i++)
-        // {
-        //     _bmsData[id].cellTemperature[i] = *data++;
-        // }
-        // _bmsData[id].balanceTemperature = *data++;
         _bmsData[id].maxCellVoltage = *data++;
         _bmsData[id].minCellVoltage = *data++;
         _bmsData[id].cellVoltageDiff = *data++;
         _bmsData[id].maxCellTemp = *data++;
         _bmsData[id].minCellTemp = *data++;
         _bmsData[id].fetTemp = *data++;
-        // _bmsData[id].remainChgTime = ((*data++) << 16) + *data++;
-        // _bmsData[id].remainDsgTime = ((*data++) << 16) + *data++;
+        for (size_t i = 0; i < _bmsData[id].cellTemperature.size(); i++)
+        {
+            _bmsData[id].cellTemperature[i] = *data++;
+        }
+        _bmsData[id].ambientTemperature = *data++;
+        _bmsData[id].remainChgTime = *data++;
+        _bmsData[id].remainDsgTime = *data++;
         return true;
     }
     return false;
@@ -565,17 +542,17 @@ void TianBMS::getCellTemperature(uint8_t id, std::array<uint16_t, 4> buffer)
 }
 
 /**
- * get balance temperature from bms data
+ * get ambient temperature from bms data
  * 
  * @param[in]   id  id of the slave
  * 
- * @return      balance temperature (divider 10), 327 = 32.7 celcius
+ * @return      ambient temperature (divider 10), 327 = 32.7 celcius
 */
-uint16_t TianBMS::getBalanceTemperature(uint8_t id)
+uint16_t TianBMS::getAmbientTemperature(uint8_t id)
 {
     if (_bmsData.find(id) != _bmsData.end())
     {
-        return _bmsData[id].balanceTemperature;
+        return _bmsData[id].ambientTemperature;
     }
     return 0;
 }

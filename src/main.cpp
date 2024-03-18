@@ -54,6 +54,7 @@ EthernetSave ethernetSave;
 
 std::vector<uint8_t> slave;
 std::vector<uint8_t>::iterator globalIterator;
+TianBMSUtils::RequestType cmd;
 // std::map<int, TianBMSData>::iterator globalIterator;
 
 unsigned long lastReconnectMillis;
@@ -1132,18 +1133,39 @@ void loop() {
           if (globalIterator != slave.end())
           {
             if (millis() - lastRequest > 500)
-            {
-              // 43 request is for all data
-              // Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
-              // 34 request for old data
-              // Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_INPUT_REGISTER, 4096, 34);
-              Error err = MB.addRequest(reader.getToken((*globalIterator), TianBMSUtils::REQUEST_DATA), (*globalIterator), READ_INPUT_REGISTER, 4096, 34);
-              if (err!=SUCCESS) {
+            {            
+              Error err;
+              switch (cmd) // state machine
+              {
+              case TianBMSUtils::RequestType::REQUEST_DATA:
+                err = MB.addRequest(reader.getToken((*globalIterator), cmd), (*globalIterator), READ_INPUT_REGISTER, 4096, 41);
+                if (err!=SUCCESS) {
                   ModbusError e(err);
                   Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                }
+                cmd = TianBMSUtils::RequestType::REQUEST_PCB_CODE;
+                break;
+              case TianBMSUtils::RequestType::REQUEST_PCB_CODE:
+                err = MB.addRequest(reader.getToken((*globalIterator), cmd), (*globalIterator), READ_INPUT_REGISTER, 4156, 15);
+                if (err!=SUCCESS) {
+                  ModbusError e(err);
+                  Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                }
+                cmd = TianBMSUtils::RequestType::REQUEST_SN1_CODE;
+                break;
+              case TianBMSUtils::RequestType::REQUEST_SN1_CODE:
+                err = MB.addRequest(reader.getToken((*globalIterator), cmd), (*globalIterator), READ_INPUT_REGISTER, 4171, 15);
+                if (err!=SUCCESS) {
+                  ModbusError e(err);
+                  Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                }
+                cmd = TianBMSUtils::RequestType::REQUEST_DATA;
+                globalIterator++; // increment the iterator to the next element    
+                break;     
+              default:
+                break;
               }
               lastRequest = millis();
-              globalIterator++; // increment the iterator to the next element
             }
           }
           else
@@ -1175,6 +1197,7 @@ void loop() {
           slavePointer = 0;
           isScanFinished = 1;
           // globalIterator = reader.getTianBMSData().begin();
+          cmd = TianBMSUtils::RequestType::REQUEST_DATA;
           globalIterator = slave.begin();
         }
         lastRequest = millis();
