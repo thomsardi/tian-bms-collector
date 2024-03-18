@@ -101,7 +101,10 @@ void WiFiSetting::begin(WifiParams &wifiParams)
             }
             else
             {
+                // WiFi.softAP("esp32-test", String(wifiParams.params.pass.data()));
                 WiFi.softAP(String(wifiParams.params.ssid.data()), String(wifiParams.params.pass.data()));
+                // std::string a(wifiParams.params.pass.data());
+                // ESP_LOGI(_TAG, "Password AP : %s\n", a.c_str());
             }
         }
         

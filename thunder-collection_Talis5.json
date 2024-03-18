@@ -1,7 +1,7 @@
 {
     "client": "Thunder Client",
     "collectionName": "Talis5",
-    "dateExported": "2024-03-05T04:36:03.427Z",
+    "dateExported": "2024-03-05T08:41:02.464Z",
     "version": "1.1",
     "folders": [],
     "requests": [
@@ -15,6 +15,20 @@
             "sortNum": 10000,
             "created": "2024-02-16T04:09:06.997Z",
             "modified": "2024-02-20T02:58:12.629Z",
+            "headers": [],
+            "params": [],
+            "tests": []
+        },
+        {
+            "_id": "92682a28-a0fe-43c4-a4c6-768bc6590190",
+            "colId": "c81d071d-e736-4af5-8955-63c46cc61daa",
+            "containerId": "",
+            "name": "Get Active Slave",
+            "url": "get-active-slave",
+            "method": "GET",
+            "sortNum": 11250,
+            "created": "2024-03-05T08:35:56.976Z",
+            "modified": "2024-03-05T08:36:04.466Z",
             "headers": [],
             "params": [],
             "tests": []
@@ -150,7 +164,7 @@
     ],
     "settings": {
         "options": {
-            "baseUrl": "http://192.168.2.144/api/"
+            "baseUrl": "http://200.10.2.145/api/"
         }
     }
 }

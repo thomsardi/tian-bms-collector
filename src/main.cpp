@@ -11,7 +11,7 @@
 #include <nvs_flash.h>
 #include <WiFiSetting.h>
 #include <TianBMS.h>
-#include <ModbusClientTCP.h>
+#include <ModbusClientRTU.h>
 #include <WiFiSave.h>
 #include <Talis5Memory.h>
 #include <Talis5JsonHandler.h>
@@ -35,11 +35,9 @@ const char *TAG = "ESP32-Tian-BMS-Collector";
 SemaphoreHandle_t write_mutex = NULL;
 SemaphoreHandle_t read_mutex = NULL;
 
-WiFiClient theClient;                          // Set up a client
-
 FlashZhttp fz;
 AsyncWebServer server(80);
-ModbusClientTCP MB(theClient);
+ModbusClientRTU MB;
 
 TianBMS reader;
 
@@ -203,7 +201,7 @@ void handleData(ModbusMessage response, uint32_t token)
     uint8_t serverId = response.getServerID();
     ESP_LOGI(TAG, "Server ID : %d\n", serverId);
     
-    if (functionCode == READ_HOLD_REGISTER)
+    if (functionCode == READ_HOLD_REGISTER || functionCode == READ_INPUT_REGISTER)
     {
         uint8_t regCount;
         uint16_t buffer[64];
@@ -369,14 +367,17 @@ void setup() {
         digitalWrite(internalLed, LOW);
     }
 
+    RTUutils::prepareHardwareSerial(Serial2);
+    Serial2.begin(9600);
+
     MB.onDataHandler(&handleData);
     MB.onErrorHandler(&handleError);
-    MB.setTimeout(2000, 200);
-    MB.begin();
+    MB.setTimeout(1000);
+    MB.begin(Serial2);
     IPAddress ip;
     if (ip.fromString(talis5Memory.getModbusTargetIp()))
     {
-        MB.setTarget(ip, talis5Memory.getModbusPort());
+        // MB.setTarget(ip, talis5Memory.getModbusPort());
     }
     // MB.setTarget(IPAddress(192, 168, 2, 113), 502);
 
@@ -687,7 +688,7 @@ void setup() {
             IPAddress ip;
             if (ip.fromString(param.modbusTargetIp))
             {
-                MB.setTarget(ip, param.modbusPort);
+                // MB.setTarget(ip, param.modbusPort);
             }
         }
         request->send(status, "application/json", handler.buildJsonResponse(status));
@@ -866,7 +867,10 @@ void loop() {
             {
                 if (millis() - lastRequest > 500)
                 {
-                    Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
+                    // 43 request is for all data
+                    // Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
+                    // 34 request for old data
+                    Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_INPUT_REGISTER, 4096, 34);
                     if (err!=SUCCESS) {
                         ModbusError e(err);
                         Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
@@ -891,7 +895,8 @@ void loop() {
         {
             ESP_LOGI(TAG, "Slave pointer : %d\n", slavePointer);
             ESP_LOGI(TAG, "Slave address : %d\n", slave.at(slavePointer));
-            Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_HOLD_REGISTER, 4096, 1);
+            // Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_HOLD_REGISTER, 4096, 1);
+            Error err = MB.addRequest(reader.getToken(slave.at(slavePointer), TianBMSUtils::REQUEST_SCAN), slave.at(slavePointer), READ_INPUT_REGISTER, 4096, 1);
             if (err!=SUCCESS) {
                 ModbusError e(err);
                 Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
