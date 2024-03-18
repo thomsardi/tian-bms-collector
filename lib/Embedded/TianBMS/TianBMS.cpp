@@ -27,39 +27,40 @@ bool TianBMS::update(uint8_t id, uint32_t token, uint16_t* data, size_t dataSize
         if (updateData(id, data, dataSize))
         {
             _bmsData[id].msgCount++;
+            _bmsData[id].errorCount = 0;
             return true;
         }
         break;
     case TianBMSUtils::RequestType::REQUEST_PCB_CODE :
         _bmsData[id].id = id;
         ESP_LOGI(_TAG, "update pcb barcode");
-        ESP_LOGI(_TAG, "register count : %d\n", dataSize);
         if (updatePcbBarcode(id, data, dataSize))
         {
-            ESP_LOGI(_TAG, "success convert");
+            ESP_LOGI(_TAG, "pcb barcode updated");
             _bmsData[id].msgCount++;
+            _bmsData[id].errorCount = 0;
             return true;
         }
         break;
     case TianBMSUtils::RequestType::REQUEST_SN1_CODE :
         _bmsData[id].id = id;
         ESP_LOGI(_TAG, "update sn1 code");
-        ESP_LOGI(_TAG, "register count : %d\n", dataSize);
         if (updateSnCode1(id, data, dataSize))
         {
-            ESP_LOGI(_TAG, "success convert");
+            ESP_LOGI(_TAG, "sn1 code updated");
             _bmsData[id].msgCount++;
+            _bmsData[id].errorCount = 0;
             return true;
         }
         
         break;
     case TianBMSUtils::RequestType::REQUEST_SN2_CODE :
         ESP_LOGI(_TAG, "update sn2 code");
-        ESP_LOGI(_TAG, "register count : %d\n", dataSize);
         if (updateSnCode2(id, data, dataSize))
         {
-            ESP_LOGI(_TAG, "success convert");
+            ESP_LOGI(_TAG, "sn2 code updated");
             _bmsData[id].msgCount++;
+            _bmsData[id].errorCount = 0;
             return true;
         }
         break;
@@ -69,6 +70,7 @@ bool TianBMS::update(uint8_t id, uint32_t token, uint16_t* data, size_t dataSize
         if (updateOnScan(id, data, dataSize))
         {
             _bmsData[id].msgCount++;
+            _bmsData[id].errorCount = 0;
             return true;
         }
         break;
