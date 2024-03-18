@@ -123,7 +123,7 @@ struct TianBMSData
     uint16_t cycleCount = 0;
     std::array<uint16_t, 16> cellVoltage;
     std::array<uint16_t, 4> cellTemperature;
-    uint16_t balanceTemperature = 0;
+    uint16_t ambientTemperature = 0;
     uint16_t maxCellVoltage = 0;
     uint16_t minCellVoltage = 0;
     uint16_t cellVoltageDiff = 0;
@@ -132,9 +132,9 @@ struct TianBMSData
     uint16_t fetTemp = 0;
     uint32_t remainChgTime = 0;
     uint32_t remainDsgTime = 0;
-    std::array<char, 33> pcbBarcode;
-    std::array<char, 33> snCode1;
-    std::array<char, 33> snCode2;
+    std::array<char, 32> pcbBarcode;
+    std::array<char, 32> snCode1;
+    std::array<char, 32> snCode2;
 
     TianBMSData()
     {
@@ -193,7 +193,7 @@ public:
     uint16_t getCycleCount(uint8_t id);
     void getCellVoltage(uint8_t id, std::array<uint16_t, 16> buffer);
     void getCellTemperature(uint8_t id, std::array<uint16_t, 4> buffer);
-    uint16_t getBalanceTemperature(uint8_t id);
+    uint16_t getAmbientTemperature(uint8_t id);
     uint16_t getMaxCellVoltage(uint8_t id);
     uint16_t getMinCellVoltage(uint8_t id);
     uint16_t getCellVoltageDiff(uint8_t id);

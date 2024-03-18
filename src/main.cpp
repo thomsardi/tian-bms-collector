@@ -46,19 +46,23 @@ WiFiSave wifiSave;
 WiFiSetting wifiSetting;
 
 std::vector<uint8_t> slave;
-std::map<int, TianBMSData>::iterator globalIterator;
+// std::map<int, TianBMSData>::iterator globalIterator;
+std::vector<uint8_t>::iterator globalIterator;
+TianBMSUtils::RequestType cmd;
 
 unsigned long lastReconnectMillis;
 unsigned long lastRequest;
 unsigned long lastCleanup;
 unsigned long lastQueueCheck;
 unsigned long lastRestartMillis;
+unsigned long lastPrint = 0;
 int reconnectInterval = 5000;
 int internalLed = 2;
 
 uint8_t slavePointer = 0;
 
 bool isRestart = false;
+bool isUpload = false;
 bool isCleanup = false;
 bool isSlaveChanged = false;
 bool isScan = false;
@@ -92,82 +96,9 @@ void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info){
 }
 
 /**
- * Handle firmware upload
+ * Handle ota upload for either compressed with pigz and data format .zz or non-compressed upload 
  * 
- * @brief it is used as an OTA firmware upload, pass the http received file into Update class which handle for flash writing
-*/
-void handleFirmwareUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-{
-    Serial.println("Handle firmware upload");
-    if(!index)
-    {
-        Serial.printf("Update Start: %s\n", filename.c_str());
-        if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000))
-        {
-            Update.printError(Serial);
-        }
-    }
-    if(!Update.hasError())
-    {
-        if(Update.write(data, len) != len)
-        {
-            Update.printError(Serial);
-        }
-    }
-    if(final)
-    {
-        if(Update.end(true))
-        {
-            Serial.printf("Update Success: %uB\n", index+len);
-        } 
-        else 
-        {
-            Update.printError(Serial);
-        }
-    }
-}
-
-/**
- * Handle filesystem upload
- * 
- * @brief it is used as an OTA filesystem upload, pass the http received file into Update class which handle for flash writing
- * 
-*/
-void handleFilesystemUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-{
-    Serial.println("Handle firmware upload");
-    if(!index)
-    {
-        Serial.printf("Update Start: %s\n", filename.c_str());
-        if(!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS))
-        {
-            Update.printError(Serial);
-        }
-    }
-    if(!Update.hasError())
-    {
-        if(Update.write(data, len) != len)
-        {
-            Update.printError(Serial);
-        }
-    }
-    if(final)
-    {
-        if(Update.end(true))
-        {
-            Serial.printf("Update Success: %uB\n", index+len);
-        } 
-        else 
-        {
-            Update.printError(Serial);
-        }
-    }
-}
-
-/**
- * Handle compressed upload with pigz and data format .zz
- * 
- * @brief   it is used as an OTA compressed upload with pigz , pass the http received file into Update class which handle for flash writing
+ * @brief   it is used as an OTA compressed upload with pigz or without compressed, pass the http received file to be decompressed or processed into Update class
  * 
  * @param[in]   request form field with key "img" with any value for firmware upload except "fs" for filesytem upload
  *                      "img" : "fs" will trigger filesystem upload, while "img" : "xxx" will trigger firmware upload with xxx is any value\
@@ -175,13 +106,14 @@ void handleFilesystemUpload(AsyncWebServerRequest *request, String filename, siz
  * for other function parameter input please refer to AsyncWebServerRequest documentation
  *          
 */
-void handleCompressedUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+void handleOtaUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
 {
     ESP_LOGI(TAG, "Handle compressed file upload\n");
     for (size_t i = 0; i < request->params(); i++)
     {
         ESP_LOGI(TAG, "%s:%s\n", request->getParam(i)->name().c_str(), request->getParam(i)->value().c_str());
     }
+    ESP_LOGI(TAG, "incoming %d bytes data\n", len);
     fz.file_upload(request, filename, index, data, len, final);
 }
 
@@ -609,7 +541,7 @@ void setup() {
         request->send(200, "text/plain", "File has been uploaded successfully.");
         isRestart = true;
         // lastTime = millis();
-    }, handleFirmwareUpload);
+    }, handleOtaUpload);
 
     server.on("/api/update-compressed-firmware", HTTP_POST, [](AsyncWebServerRequest *request){
         String output;
@@ -619,7 +551,7 @@ void setup() {
         serializeJson(doc, output);
         request->send(200, "text/plain", "File has been uploaded successfully.");
         isRestart = true;
-    }, handleCompressedUpload);
+    }, handleOtaUpload);
 
     server.on("/api/update-filesystem", HTTP_POST, [](AsyncWebServerRequest *request){
         String output;
@@ -629,7 +561,7 @@ void setup() {
         serializeJson(doc, output);
         request->send(200, "text/plain", "File has been uploaded successfully.");
         isRestart = true;
-    }, handleFilesystemUpload);
+    }, handleOtaUpload);
 
     server.on("/api/update-compressed-filesystem", HTTP_POST, [](AsyncWebServerRequest *request){
         String output;
@@ -639,7 +571,7 @@ void setup() {
         serializeJson(doc, output);
         request->send(200, "text/plain", "File has been uploaded successfully.");
         isRestart = true;
-    }, handleCompressedUpload);
+    }, handleOtaUpload);
 
     AsyncCallbackJsonWebHandler *setSlaveHandler = new AsyncCallbackJsonWebHandler("/api/set-slave", [](AsyncWebServerRequest *request, JsonVariant &json)
     {
@@ -762,18 +694,26 @@ void setup() {
         }
     });
     server.begin();
-    globalIterator = reader.getTianBMSData().begin();
+    // globalIterator = reader.getTianBMSData().begin();
+    globalIterator = slave.begin();
     lastRequest = millis();
     lastCleanup = millis();
+    lastPrint = millis();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  	// ESP_LOGI(TAG, "ULULULULU");
-    
+  	
+    // if (millis() - lastPrint > 1000)
+    // {
+    //     ESP_LOGI(TAG, "ULULULULU");
+    //     lastPrint = millis();
+    // }
+
     if (wifiSetting.getMode() == mode_type::STATION || wifiSetting.getMode() == mode_type::AP_STATION)
 	{
-		if ((WiFi.status() != WL_CONNECTED) && (millis() - lastReconnectMillis >= reconnectInterval)) {
+		if ((WiFi.status() != WL_CONNECTED) && (millis() - lastReconnectMillis >= reconnectInterval)) 
+        {
 			digitalWrite(internalLed, LOW);
 			ESP_LOGI(TAG, "===============Reconnecting to WiFi...========================\n");
 			if (WiFi.reconnect())
@@ -783,37 +723,35 @@ void loop() {
 		}
 	}
 
-    /**
-     * TO DO : This block is used to clean up obsolete data to free up space, but still causing crash
-    */
-    // if (isScanFinished)
-    // {
-    //     if (millis() - lastCleanup > 1000)
-    //     {
-    //         isCleanup = true;
-    //         if (MB.pendingRequests() == 0) // check if there is still pending request on queue, wait until it is empty
-    //         {
-    //             reader.cleanUp(); // perform cleanup
-    //             ESP_LOGI(TAG, "clean up");
-    //             isCleanup = false;
-    //             std::map<int, TianBMSData>::iterator it = reader.getTianBMSData().begin();
-    //             if (it == reader.getTianBMSData().end()) // check if data is empty
-    //             {
-    //                 emptyCount++;
-    //                 if (emptyCount > 3) // if it is empty during > 3 times check, then perform address scan again
-    //                 {
-    //                     isScanFinished = false;
-    //                     emptyCount = 0;
-    //                 }
-    //             }
-    //             lastCleanup = millis();
-    //         }
-    //     }
-    // }
-    // else
-    // {
-    //     lastCleanup = millis();
-    // }
+    if (isScanFinished)
+    {
+        if (millis() - lastCleanup > 1000)
+        {
+            ESP_LOGI(TAG, "check clean up");
+            isCleanup = true;
+            if (MB.pendingRequests() == 0) // check if there is still pending request on queue, wait until it is empty
+            {
+                if (xSemaphoreTake(read_mutex, portMAX_DELAY))
+                {
+                    if (xSemaphoreTake(write_mutex, portMAX_DELAY))
+                    {
+                        ESP_LOGI(TAG, "clean up");
+                        reader.cleanUp();
+                        isCleanup = false;
+                        lastCleanup = millis();
+                        xSemaphoreGive(write_mutex);
+                    }
+                    xSemaphoreGive(read_mutex);
+                }
+            // isScanFinished = false;
+            }
+            lastCleanup = millis();
+        }
+    }
+    else
+    {
+      lastCleanup = millis();
+    }
 
     if(isSlaveChanged || isScan)
     {
@@ -858,33 +796,57 @@ void loop() {
     {
         /**
          * This block will push the request to queue based on detected slave
-        */
-        // if (!isCleanup) // this flag is to detect if it's time to do cleanup, then pause the .addRequest
-        // { 
-        if (!isSlaveChanged && !isScan) // if it is not scan or not slave changed, do normal polling
-        {
-            if (globalIterator != reader.getTianBMSData().end())
+         */
+        if (!isCleanup) // this flag is to detect if it's time to do cleanup, then pause the .addRequest
+        { 
+            if (!isSlaveChanged && !isScan) // if it is not scan or not slave changed, do normal polling
             {
-                if (millis() - lastRequest > 500)
+                // if (globalIterator != reader.getTianBMSData().end())
+                if (globalIterator != slave.end())
                 {
-                    // 43 request is for all data
-                    // Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_HOLD_REGISTER, 4096, 43);
-                    // 34 request for old data
-                    Error err = MB.addRequest(reader.getToken((*globalIterator).first, TianBMSUtils::REQUEST_DATA), (*globalIterator).first, READ_INPUT_REGISTER, 4096, 34);
-                    if (err!=SUCCESS) {
-                        ModbusError e(err);
-                        Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                    if (millis() - lastRequest > 500)
+                    {            
+                        Error err;
+                        switch (cmd) // state machine
+                        {
+                        case TianBMSUtils::RequestType::REQUEST_DATA:
+                            err = MB.addRequest(reader.getToken((*globalIterator), cmd), (*globalIterator), READ_INPUT_REGISTER, 4096, 41);
+                            if (err!=SUCCESS) {
+                            ModbusError e(err);
+                            Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                            }
+                            cmd = TianBMSUtils::RequestType::REQUEST_PCB_CODE;
+                            break;
+                        case TianBMSUtils::RequestType::REQUEST_PCB_CODE:
+                            err = MB.addRequest(reader.getToken((*globalIterator), cmd), (*globalIterator), READ_INPUT_REGISTER, 4156, 15);
+                            if (err!=SUCCESS) {
+                            ModbusError e(err);
+                            Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                            }
+                            cmd = TianBMSUtils::RequestType::REQUEST_SN1_CODE;
+                            break;
+                        case TianBMSUtils::RequestType::REQUEST_SN1_CODE:
+                            err = MB.addRequest(reader.getToken((*globalIterator), cmd), (*globalIterator), READ_INPUT_REGISTER, 4171, 15);
+                            if (err!=SUCCESS) {
+                            ModbusError e(err);
+                            Serial.printf("Error creating request: %02X - %s\n", (int)e, (const char *)e);
+                            }
+                            cmd = TianBMSUtils::RequestType::REQUEST_DATA;
+                            globalIterator++; // increment the iterator to the next element    
+                            break;     
+                        default:
+                            break;
+                        }
+                        lastRequest = millis();
                     }
-                    lastRequest = millis();
-                    globalIterator++; // increment the iterator to the next element
+                }
+                else
+                {
+                    // globalIterator = reader.getTianBMSData().begin(); // get the iterator of the first element of data
+                    globalIterator = slave.begin(); // get the iterator of the first element of data
                 }
             }
-            else
-            {
-                globalIterator = reader.getTianBMSData().begin(); // get the iterator of the first element of data
-            }
         }
-        // }
     }
     else
     {
@@ -906,7 +868,9 @@ void loop() {
             {
                 slavePointer = 0;
                 isScanFinished = 1;
-                globalIterator = reader.getTianBMSData().begin();
+                cmd = TianBMSUtils::RequestType::REQUEST_DATA;
+                // globalIterator = reader.getTianBMSData().begin();
+                globalIterator = slave.begin();
             }
             lastRequest = millis();
         }
