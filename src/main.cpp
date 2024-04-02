@@ -300,7 +300,7 @@ void setup() {
     }
 
     RTUutils::prepareHardwareSerial(Serial2);
-    Serial2.begin(9600);
+    Serial2.begin(115200);
 
     MB.onDataHandler(&handleData);
     MB.onErrorHandler(&handleError);
