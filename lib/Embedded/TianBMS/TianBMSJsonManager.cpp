@@ -28,7 +28,7 @@ String TianBMSJsonManager::buildData(const TianBMSData &tianBMSData)
 
     JsonObject pack_current = doc["pack_current"].to<JsonObject>();
     pack_current["unit"] = "A";
-    pack_current["divider"] = 100;
+    pack_current["divider"] = 10;
     pack_current["value"] = tianBMSData.packCurrent;
 
     JsonObject remaining_capacity = doc["remaining_capacity"].to<JsonObject>();
