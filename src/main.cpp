@@ -533,7 +533,7 @@ void setupEthernet()
   SPI.begin(21, 18, 19, 22);
   Ethernet.init(22);
   // std::array<uint8_t, 6> macAddr;
-  std::array<uint8_t, 6> macAddr = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x01 };
+  std::array<uint8_t, 6> macAddr = { 0xDE, 0xAD, 0xBE, 0xEF, 0xBE, 0x02 };
   // ethernetSave.getMac(macAddr.data(), macAddr.size());
   switch (ethernetSave.getServer())
   {
